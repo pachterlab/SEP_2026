@@ -1,0 +1,19 @@
+name: sep_2026
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - r-base=4.4
+  - r-matrix
+  - numpy=2.4
+  - pandas=2.3
+  - scipy=1.16
+  - scikit-learn=1.7
+  - matplotlib=3.10
+  - pillow=11
+  - openpyxl=3.1
+  - pip
+  - pip:
+      - umap-learn==0.5.9.post2
+      - elpigraph-python==0.3.2
+      - -e ./vendor/clrcycle

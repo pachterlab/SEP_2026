@@ -1,0 +1,59 @@
+{
+  "settings": {
+    "seed": 17,
+    "top_n": 250,
+    "test_size": 0.2,
+    "n_swaps": 4000,
+    "preprocessing": {
+      "rnaseq": "raw gene counts; duplicate symbols summed; CLR pseudocount internal to clrcycle",
+      "single_cell": "donor sums across all cells; CLR"
+    }
+  },
+  "n_rnaseq_train": 188,
+  "n_rnaseq_heldout": 48,
+  "n_rnaseq_10x_c1_shared_genes": 21260,
+  "n_final_common_genes": 250,
+  "training_rho": 0.8412622571540814,
+  "orientation": {
+    "training_stage_R": 0.8666804324109572,
+    "reflected": true,
+    "rotation_radians": -2.564982378925041
+  },
+  "metrics": {
+    "RNAseq held-out": {
+      "n": 48,
+      "reference_n": 48,
+      "circular_phase_agreement_R": 0.887030568386811,
+      "mean_absolute_circular_error": 6.822075275615602,
+      "spearman_rho": 0.7312796875916292,
+      "spearman_p": 3.5720587108332166e-09,
+      "stage_n": 48,
+      "stage_exact": 0.6041666666666666,
+      "stage_within_one_circular": 0.9791666666666666
+    },
+    "10x transfer": {
+      "n": 10,
+      "reference_n": 10,
+      "circular_phase_agreement_R": 0.4937603590033467,
+      "mean_absolute_circular_error": 4.010562209687079,
+      "spearman_rho": 0.3486385256233475,
+      "spearman_p": 0.32348723178461464,
+      "stage_n": 10,
+      "stage_exact": 0.7,
+      "stage_within_one_circular": 0.9,
+      "canonical_phase_compatible_fraction": 0.9
+    },
+    "C1 transfer": {
+      "n": 19,
+      "reference_n": 19,
+      "circular_phase_agreement_R": 0.8591472163796128,
+      "mean_absolute_circular_error": 3.146108169859125,
+      "spearman_rho": 0.95163040136657,
+      "spearman_p": 3.8614946011148195e-10,
+      "stage_n": 19,
+      "stage_exact": 0.5263157894736842,
+      "stage_within_one_circular": 0.9473684210526315,
+      "canonical_phase_compatible_fraction": 0.5263157894736842
+    }
+  }
+}

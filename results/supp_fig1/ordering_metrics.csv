@@ -1,0 +1,3 @@
+method,n_genes,R_vs_histology_peak_stage,mean_absolute_circular_error_stages,median_absolute_circular_error_stages
+clrcycle,250,0.8432405676554294,0.49224803016731483,0.374
+ElPiGraph,250,0.7699620982894251,0.6152023966150021,0.4151443974305809

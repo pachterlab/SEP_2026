@@ -1,0 +1,2 @@
+R,mean_absolute_circular_error_radians,rho_clrcycle,objective_F,lambda_1,lambda_2,alignment_reflected,alignment_rotation_radians,n_cells,n_genes,seed,n_swaps
+0.44081591620410987,1.0014910760093705,0.4849315590659295,19.40843757734313,21.714987649820287,18.30805728197886,False,-0.44034556674486,888,100,17,4000

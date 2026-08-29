@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environments and editor files
+.venv/
+venv/
+.env
+.DS_Store
+.idea/
+.vscode/
+
+# Downloaded and generated data (retain directory placeholders)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Temporary files and logs
+*.log
+*.tmp
+*~

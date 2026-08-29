@@ -1,0 +1,11 @@
+{
+  "python": "3.11.16",
+  "platform": "Linux-5.4.0-216-generic-x86_64-with-glibc2.31",
+  "clrcycle": "0.1.0",
+  "numpy": "2.4.6",
+  "pandas": "2.3.3",
+  "matplotlib": "3.11.1",
+  "scipy": "1.17.1",
+  "scikit-learn": "1.9.0",
+  "umap-learn": "0.5.9.post2"
+}
