@@ -16,6 +16,10 @@ This repository contains the data-processing, analysis, benchmarking, and figure
 
 Figures are written to `figures/` as PDF, SVG, and 300-dpi PNG files. Numerical outputs are written to the corresponding directory under `results/`.
 
+See [`scripts/README.md`](scripts/README.md) for the execution order, inputs,
+outputs, fast rerun modes, shared-library map, and reproducibility notes for
+each analysis.
+
 ## Installation
 
 ```bash

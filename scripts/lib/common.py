@@ -19,26 +19,54 @@ import pandas as pd
 
 SEED = 17
 STAGE_NAMES = [
-    "Menstrual", "Early prolif.", "Mid prolif.", "Late prolif.",
-    "Early secr.", "Mid secr.", "Late secr.",
+    "Menstrual",
+    "Early prolif.",
+    "Mid prolif.",
+    "Late prolif.",
+    "Early secr.",
+    "Mid secr.",
+    "Late secr.",
 ]
-STAGE_COLORS = ["#7b5aa6", "#4f81bd", "#3aa39b", "#67a65b", "#e4c64f", "#f39a3c", "#d95b69"]
+STAGE_COLORS = [
+    "#7b5aa6",
+    "#4f81bd",
+    "#3aa39b",
+    "#67a65b",
+    "#e4c64f",
+    "#f39a3c",
+    "#d95b69",
+]
 
 
 def set_style() -> None:
-    mpl.rcParams.update({
-        "font.family": "DejaVu Sans", "font.size": 8, "axes.titlesize": 9,
-        "axes.labelsize": 8, "legend.fontsize": 7, "xtick.labelsize": 7,
-        "ytick.labelsize": 7, "axes.linewidth": 0.7, "lines.linewidth": 1.2,
-        "savefig.bbox": "tight", "svg.fonttype": "none", "pdf.fonttype": 42,
-    })
+    """Apply the compact Matplotlib style shared by manuscript figures."""
+    mpl.rcParams.update(
+        {
+            "font.family": "DejaVu Sans",
+            "font.size": 8,
+            "axes.titlesize": 9,
+            "axes.labelsize": 8,
+            "legend.fontsize": 7,
+            "xtick.labelsize": 7,
+            "ytick.labelsize": 7,
+            "axes.linewidth": 0.7,
+            "lines.linewidth": 1.2,
+            "savefig.bbox": "tight",
+            "svg.fonttype": "none",
+            "pdf.fonttype": 42,
+        }
+    )
 
 
 def panel_label(axis, label: str, x: float = -0.12, y: float = 1.08) -> None:
-    axis.text(x, y, label, transform=axis.transAxes, fontsize=11, fontweight="bold", va="top")
+    """Place a bold manuscript panel label on an axes."""
+    axis.text(
+        x, y, label, transform=axis.transAxes, fontsize=11, fontweight="bold", va="top"
+    )
 
 
 def save_figure(figure, root: Path, stem: str) -> None:
+    """Save one figure as PDF, SVG, and high-resolution PNG."""
     out = root / "figures"
     out.mkdir(parents=True, exist_ok=True)
     figure.savefig(out / f"{stem}.pdf")
@@ -47,7 +75,19 @@ def save_figure(figure, root: Path, stem: str) -> None:
     plt.close(figure)
 
 
-def write_versions(path: Path, packages=("clrcycle", "numpy", "pandas", "matplotlib", "scipy", "scikit-learn", "umap-learn")) -> None:
+def write_versions(
+    path: Path,
+    packages=(
+        "clrcycle",
+        "numpy",
+        "pandas",
+        "matplotlib",
+        "scipy",
+        "scikit-learn",
+        "umap-learn",
+    ),
+) -> None:
+    """Record Python, platform, and package versions as JSON."""
     rows = {"python": sys.version.split()[0], "platform": platform.platform()}
     for package in packages:
         try:
@@ -99,6 +139,7 @@ def parse_geo_matrix(path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def parse_geo_metadata(paths: list[Path]) -> pd.DataFrame:
+    """Combine sample metadata parsed from multiple GEO matrix files."""
     frames = []
     for path in paths:
         _, meta = parse_geo_matrix(path)
@@ -108,6 +149,7 @@ def parse_geo_metadata(paths: list[Path]) -> pd.DataFrame:
 
 
 def harmonic_score(values: np.ndarray, phase: np.ndarray) -> np.ndarray:
+    """Score each feature by variance explained by its first harmonic."""
     design = np.c_[np.ones(len(phase)), np.cos(phase), np.sin(phase)]
     fitted = design @ np.linalg.lstsq(design, values, rcond=None)[0]
     residual = ((values - fitted) ** 2).sum(axis=0)
@@ -118,26 +160,38 @@ def harmonic_score(values: np.ndarray, phase: np.ndarray) -> np.ndarray:
     return score
 
 
-def align_angles(predicted: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, float, float]:
+def align_angles(
+    predicted: np.ndarray, target: np.ndarray
+) -> tuple[np.ndarray, float, float]:
+    """Align circular angles by choosing a reflection and rotation."""
     candidates = []
     for direction in (1.0, -1.0):
         oriented = direction * predicted
         offset = np.angle(np.mean(np.exp(1j * (target - oriented))))
         aligned = np.mod(oriented + offset, 2 * np.pi)
         error = np.angle(np.exp(1j * (aligned - target)))
-        candidates.append((aligned, float(np.abs(np.mean(np.exp(1j * error)))), float(np.mean(np.abs(error)))))
+        candidates.append(
+            (
+                aligned,
+                float(np.abs(np.mean(np.exp(1j * error)))),
+                float(np.mean(np.abs(error))),
+            )
+        )
     return max(candidates, key=lambda item: item[1])
 
 
 def phase_from_stage(stage: np.ndarray) -> np.ndarray:
+    """Map integer endometrium stages to canonical circular phases."""
     return np.mod((np.asarray(stage, float) - 1) / 7 * 2 * np.pi, 2 * np.pi)
 
 
 def day_to_stage(day: np.ndarray) -> np.ndarray:
+    """Convert cycle-day estimates to the seven histological stages."""
     return np.digitize(np.asarray(day, float), [4, 7, 11, 15, 19, 23], right=True) + 1
 
 
 def ensembl_symbol_map(gtf: Path) -> dict[str, str]:
+    """Read an Ensembl-to-gene-symbol mapping from a gzipped GTF."""
     mapping: dict[str, str] = {}
     pattern = re.compile(r'gene_id "([^"]+)";.*gene_name "([^"]+)";')
     with gzip.open(gtf, "rt") as handle:
@@ -150,7 +204,10 @@ def ensembl_symbol_map(gtf: Path) -> dict[str, str]:
     return mapping
 
 
-def frozen_project(data: pd.DataFrame, ordered_features: list[str], training_mean: np.ndarray) -> pd.DataFrame:
+def frozen_project(
+    data: pd.DataFrame, ordered_features: list[str], training_mean: np.ndarray
+) -> pd.DataFrame:
+    """Project new samples through a fixed clrcycle feature order."""
     selected = data.reindex(columns=ordered_features, fill_value=0.0).astype(float)
     values = selected.to_numpy()
     positive = values[values > 0]
@@ -163,6 +220,12 @@ def frozen_project(data: pd.DataFrame, ordered_features: list[str], training_mea
     cosine = np.sqrt(2 / d) * np.cos(angles)
     sine = np.sqrt(2 / d) * np.sin(angles)
     x, y = centered @ cosine, centered @ sine
-    return pd.DataFrame({"sample": data.index.astype(str), "clrcycle_cosine": x, "clrcycle_sine": y,
-                         "clrcycle_angle": np.mod(np.arctan2(y, x), 2 * np.pi),
-                         "clrcycle_radius": np.hypot(x, y)})
+    return pd.DataFrame(
+        {
+            "sample": data.index.astype(str),
+            "clrcycle_cosine": x,
+            "clrcycle_sine": y,
+            "clrcycle_angle": np.mod(np.arctan2(y, x), 2 * np.pi),
+            "clrcycle_radius": np.hypot(x, y),
+        }
+    )
