@@ -272,10 +272,10 @@ def draw_gene_circle(axis: plt.Axes, order: np.ndarray, *,
         axis.plot(.22*np.cos(arc), .22*np.sin(arc), color=GREEN, lw=1.8)
         axis.text(.31*np.cos(phi/2), .31*np.sin(phi/2), r"$\phi_i$",
                   fontsize=13, color=GREEN, ha="center", va="center")
-        axis.text(.57*point[0], .57*point[1]+.04, r"$R_i$",
+        axis.text(.57*point[0], .57*point[1]+.04, r"$r_i$",
                   fontsize=13, color=GREEN, ha="center")
-        axis.text(1.23, -.15, "cosine", fontsize=13)
-        axis.text(.06, 1.22, "sine", fontsize=13)
+        axis.text(1.23, -.15, r"$u_i$", fontsize=13)
+        axis.text(.06, 1.22, r"$v_i$", fontsize=13)
 
     axis.set(xlim=(-1.38, 1.48), ylim=(-1.30, 1.35), aspect="equal")
     axis.axis("off")
@@ -294,8 +294,8 @@ def draw_projection(axis: plt.Axes, order: np.ndarray,
     panel_title(axis, 6, "Project cells")
     draw_gene_circle(axis, order, projected=projected)
     axis.text(.5, -.08,
-              r"$X_i=\sum_g z_{i,\pi(g)}\cos\theta_g$"
-              "   " r"$Y_i=\sum_g z_{i,\pi(g)}\sin\theta_g$",
+              r"$u_i=\sum_g Z_{i,\widehat{\pi}(g)}c_g$"
+              "   " r"$v_i=\sum_g Z_{i,\widehat{\pi}(g)}s_g$",
               transform=axis.transAxes, ha="center", fontsize=12)
 
 

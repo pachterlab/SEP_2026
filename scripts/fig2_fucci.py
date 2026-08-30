@@ -132,14 +132,15 @@ for k,name in enumerate(method_order):
  ax=fig.add_subplot(right[k,0]); xy=embeddings[name]
  ax.scatter(xy[:,0],xy[:,1],c=theta,cmap=cmap,norm=Normalize(0,TWO_PI),s=11,alpha=.8,linewidths=0,rasterized=True)
  row=metric.loc[name]; display_name=name.replace(" (2D)","").replace(" (2 PCs)","")
- ax.set_title(display_name,y=1.12,pad=0)
+ # Keep the title-to-metric spacing identical across panels F--H.
+ ax.set_title(display_name,y=1.17,pad=0)
  ax.text(.5,1.035,f"R={row.circular_agreement:.3f}, distance stress={row.distance_stress:.3f}",
          transform=ax.transAxes,ha="center",va="bottom",fontsize=METRIC_SIZE,
          fontweight="bold")
  ax.set_aspect("equal",adjustable="datalim"); ax.set_box_aspect(1); ax.set_anchor("W")
  ax.set_xlabel("PC1" if name.startswith("PCA") else "UMAP1" if name.startswith("UMAP") else "Spectral 1")
  ax.set_ylabel("PC2" if name.startswith("PCA") else "UMAP2" if name.startswith("UMAP") else "Spectral 2")
- panel_label(ax,chr(ord("F")+k),x=-.16,y=1.17)
+ panel_label(ax,chr(ord("F")+k),x=-.16,y=1.22)
 
 # Shared continuous legend with the biological labels used in the source figure.
 sm=plt.cm.ScalarMappable(norm=Normalize(0,TWO_PI),cmap=cmap)
