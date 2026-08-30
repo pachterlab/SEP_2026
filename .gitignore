@@ -14,6 +14,9 @@ venv/
 .idea/
 .vscode/
 
+# Local vendored packages are not part of the paper repository.
+/vendor/
+
 # Downloaded and generated data (retain directory placeholders)
 data/raw/*
 !data/raw/.gitkeep
