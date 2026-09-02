@@ -1,0 +1,43 @@
+{
+  "clrcycle_version": "0.1.0",
+  "clrcycle_path": "/home/nikki/covariance_geometry/SEP_2026/vendor/clrcycle/clrcycle/__init__.py",
+  "analyses": {
+    "Circadian": {
+      "samples": 288,
+      "selected_features_per_fit": 240,
+      "fits": 12,
+      "feature_weight_rows": 69120,
+      "max_radius_reconstruction_error": 1.2878587085651816e-14,
+      "included_in_excel": true,
+      "csv": "/home/nikki/covariance_geometry/SEP_2026/results/supplementary_data/circadian_feature_weights.csv.gz"
+    },
+    "FUCCI": {
+      "samples": 888,
+      "selected_features_per_fit": 100,
+      "fits": 1,
+      "feature_weight_rows": 88800,
+      "max_radius_reconstruction_error": 4.440892098500626e-15,
+      "included_in_excel": true,
+      "csv": "/home/nikki/covariance_geometry/SEP_2026/results/supplementary_data/fucci_feature_weights.csv.gz"
+    },
+    "Endometrium": {
+      "samples": 188,
+      "selected_features_per_fit": 250,
+      "fits": 1,
+      "feature_weight_rows": 47000,
+      "max_radius_reconstruction_error": 2.842170943040401e-14,
+      "included_in_excel": true,
+      "csv": "/home/nikki/covariance_geometry/SEP_2026/results/supplementary_data/endometrium_feature_weights.csv.gz"
+    }
+  },
+  "workbook": "/home/nikki/covariance_geometry/SEP_2026/results/supplementary_data/Supplementary_Data_clrcycle_feature_weights.xlsx",
+  "liver_CT10_sample_ids": [
+    "Liv_CT34",
+    "Liv_CT58"
+  ],
+  "liver_CT10_features_plotted": 50,
+  "liver_CT10_selection": "25 highest and 25 lowest mean feature weights across both replicates",
+  "rows_follow_clrcycle_order": true,
+  "liver_CT10_max_radius_error": 9.769962616701378e-15,
+  "supplementary_figure_renumbering": "CT10 heatmap is Supplementary Figure 1; benchmarks are Supplementary Figure 2"
+}

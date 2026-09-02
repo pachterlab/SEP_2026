@@ -12,9 +12,15 @@ This repository contains the data-processing, analysis, benchmarking, and figure
 | Figure 1 | Circadian atlas analysis | `scripts/fig1_circadian.py` |
 | Figure 2 | FUCCI cell-cycle analysis | `scripts/fig2_fucci.py` |
 | Figure 3 | Endometrium menstrual-cycle analysis | `scripts/fig3_endometrium.py` |
-| Supplementary Figure 1 | Circular-ordering and harmonic-distortion benchmarks | `scripts/supplementary_figure1_benchmarks.py` |
+| Supplementary Figure 1 | Liver CT10 native feature-weight decomposition | `scripts/supplementary_feature_weights.py` |
+| Supplementary Figure 2 | Circular-ordering and harmonic-distortion benchmarks | `scripts/supplementary_figure2_benchmarks.py` |
 
 Figures are written to `figures/` as PDF, SVG, and 300-dpi PNG files. Numerical outputs are written to the corresponding directory under `results/`.
+The three complete native feature-weight tables and submission workbook are
+written to `results/supplementary_data/` as
+`Supplementary_Data_clrcycle_feature_weights.xlsx` and the corresponding
+`circadian_feature_weights.csv.gz`, `fucci_feature_weights.csv.gz`, and
+`endometrium_feature_weights.csv.gz` files.
 
 See [`scripts/README.md`](scripts/README.md) for the execution order, inputs,
 outputs, fast rerun modes, shared-library map, and reproducibility notes for
@@ -68,8 +74,12 @@ python scripts/fig2_fucci.py --plot
 # Figure 3: endometrium menstrual cycle
 python scripts/fig3_endometrium.py
 
-# Supplementary Figure 1: ordering and distortion benchmarks
-python scripts/supplementary_figure1_benchmarks.py --plot
+# Supplementary Figure 1 and collated feature-weight data
+python scripts/supplementary_feature_weights.py
+
+# Supplementary Figure 2: ordering and distortion benchmarks
+python scripts/supplementary_figure2_benchmarks.py --plot
+
 ```
 
 Figure 1 can also be redrawn from existing numerical results without rerunning its analysis:
@@ -91,14 +101,16 @@ SEP_2026/
 │   ├── fig1/                # circadian outputs
 │   ├── fig2/                # FUCCI outputs
 │   ├── fig3/                # endometrium outputs
-│   └── supp_fig1/           # benchmark outputs
+│   ├── supplementary_data/  # collated native feature weights
+│   └── supp_fig2/           # benchmark outputs
 ├── scripts/
 │   ├── lib/                 # shared analysis functions
 │   ├── methods_figure.py
 │   ├── fig1_circadian.py
 │   ├── fig2_fucci.py
 │   ├── fig3_endometrium.py
-│   └── supplementary_figure1_benchmarks.py
+│   ├── supplementary_feature_weights.py
+│   └── supplementary_figure2_benchmarks.py
 ├── vendor/clrcycle/         # paper version of clrcycle
 ├── environment.yml
 └── Makefile

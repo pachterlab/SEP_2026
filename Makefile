@@ -10,6 +10,7 @@ figures:
 	$(PYTHON) scripts/fig1_circadian.py
 	$(PYTHON) scripts/fig2_fucci.py --plot
 	$(PYTHON) scripts/fig3_endometrium.py
-	$(PYTHON) scripts/supplementary_figure1_benchmarks.py --plot
+	$(PYTHON) scripts/supplementary_feature_weights.py
+	$(PYTHON) scripts/supplementary_figure2_benchmarks.py --plot
 
 all: data figures

@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 import subprocess
 import gzip
+import sys
 import numpy as np
 import pandas as pd
 from scipy.optimize import least_squares
@@ -11,6 +12,8 @@ from scipy.spatial.distance import pdist
 from sklearn.decomposition import PCA
 from sklearn.manifold import SpectralEmbedding
 from umap import UMAP
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "vendor/clrcycle"))
 import clrcycle
 
 TWO_PI = 2 * np.pi
@@ -132,8 +135,17 @@ def run_clrcycle(expression, ranking, meta, out):
     ga = order.clrcycle_angle.to_numpy()
     ga = -ga if reflected else ga
     order["clrcycle_angle_aligned"] = (ga + rotation) % TWO_PI
+    weights = result.feature_weights.copy()
+    weights["measured_fucci_theta"] = weights["sample"].map(meta.theta)
+    weights["experiment"] = weights["sample"].map(meta.experiment)
+    weights["chip_id"] = weights["sample"].map(meta.chip_id)
+    feature_meta = ranking.set_index("ENSG")
+    weights["gene"] = weights["feature"].map(feature_meta.gene)
+    weights["published_rank"] = weights["feature"].map(feature_meta["rank"])
+    weights["published_pve"] = weights["feature"].map(feature_meta.pve)
     cells.to_csv(out / "clrcycle_sample_coordinates.csv", index=False)
     order.to_csv(out / "clrcycle_gene_order.csv", index=False)
+    weights.to_csv(out / "clrcycle_feature_weights.csv.gz", index=False)
     ranking.to_csv(out / "published_gene_panel.csv", index=False)
     clr = clrcycle.clr_transform(expression.to_numpy(float))
     centered = clr - clr.mean(axis=0, keepdims=True)
@@ -164,6 +176,7 @@ def run_clrcycle(expression, ranking, meta, out):
         "centered_clr": centered,
         "theta": theta,
         "metrics": metrics,
+        "feature_weights": weights,
     }
 
 

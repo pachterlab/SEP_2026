@@ -48,6 +48,7 @@ def circadian_cmap():
 
 def sample_projection(ax, table, cmap, labels=False):
     """Draw one tissue's aligned sample projection on ``ax``."""
+    median_radius = float(table.acs_radius.median())
     sc = ax.scatter(
         table.acs_u_aligned,
         table.acs_v_aligned,
@@ -67,7 +68,7 @@ def sample_projection(ax, table, cmap, labels=False):
     ax.add_patch(
         plt.Circle(
             (0, 0),
-            float(table.acs_radius.median()),
+            median_radius,
             fill=False,
             color=".5",
             ls="--",
@@ -75,6 +76,33 @@ def sample_projection(ax, table, cmap, labels=False):
             zorder=0,
         )
     )
+    # The phase alignment places CT0 on +x and CT12 on -x. Mark those two
+    # reference phases on the median-radius circle in every sample projection.
+    tick_half_length = 0.045 * median_radius
+    tick_inner = 0.96 * median_radius
+    tick_outer = 1.04 * median_radius
+    tick_fontsize = 12 if labels else 8.5
+    for direction, phase_label in ((1, "CT0"), (-1, "CT12")):
+        ax.plot(
+            [direction * tick_inner, direction * tick_outer],
+            [0, 0],
+            color="black",
+            lw=1.2 if labels else 0.9,
+            solid_capstyle="butt",
+            zorder=5,
+        )
+        ax.annotate(
+            phase_label,
+            xy=(direction * (tick_outer + tick_half_length), 0),
+            xytext=(2 * direction, 3),
+            textcoords="offset points",
+            ha="left" if direction > 0 else "right",
+            va="bottom",
+            fontsize=tick_fontsize,
+            fontweight="bold",
+            color="black",
+            zorder=6,
+        )
     if labels:
         for row in table.itertuples():
             ax.text(
@@ -405,7 +433,7 @@ def main():
     annotation = read_annotation(RAW / "GPL6246.annot.gz")
     liver_out = ROOT / "results/fig1/liver"
     liver_out.mkdir(parents=True, exist_ok=True)
-    liver_cells, liver_features, liver_scores, liver_metrics = analyze(
+    liver_cells, liver_features, liver_scores, liver_metrics, liver_weights = analyze(
         expression, annotation, "Liv", 17
     )
     liver_cells.drop(columns="tissue").to_csv(
@@ -416,11 +444,15 @@ def main():
     )
     liver_scores.to_csv(liver_out / "liver_harmonic_feature_scores.csv", index=False)
     pd.DataFrame([liver_metrics]).to_csv(liver_out / "liver_metrics.csv", index=False)
+    liver_weights.to_csv(liver_out / "liver_feature_weights.csv.gz", index=False)
     samples = []
     features = []
+    feature_weights = []
     metrics = []
     for index, prefix in enumerate(prefixes(expression.columns)):
-        cell, gene, scores, row = analyze(expression, annotation, prefix, 17 + index)
+        cell, gene, scores, row, weights = analyze(
+            expression, annotation, prefix, 17 + index
+        )
         cell.to_csv(OUT / f"{prefix.lower()}_sample_coordinates.csv", index=False)
         gene.to_csv(OUT / f"{prefix.lower()}_feature_order.csv", index=False)
         scores.to_csv(
@@ -428,12 +460,16 @@ def main():
         )
         samples.append(cell)
         features.append(gene)
+        feature_weights.append(weights)
         metrics.append(row)
     pd.concat(samples, ignore_index=True).to_csv(
         OUT / "all_tissue_sample_coordinates.csv", index=False
     )
     pd.concat(features, ignore_index=True).to_csv(
         OUT / "all_tissue_feature_orders.csv", index=False
+    )
+    pd.concat(feature_weights, ignore_index=True).to_csv(
+        OUT / "all_tissue_feature_weights.csv.gz", index=False
     )
     table = pd.DataFrame(metrics)
     table.to_csv(OUT / "all_tissue_metrics.csv", index=False)

@@ -3,8 +3,13 @@
 from __future__ import annotations
 import gzip, re
 from pathlib import Path
+import sys
 import numpy as np
 import pandas as pd
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "vendor/clrcycle"))
+import clrcycle
 
 LABELS = {
     "Adr": "Adrenal",
@@ -177,16 +182,14 @@ def analyze(expr, annot, prefix, seed):
     )
     selected = scores.head(240)
     ids = selected.ID_REF.tolist()
-    z = clr(tissue[ids].to_numpy())
-    z -= z.mean(0, keepdims=True)
-    cov = z.T @ z / (len(z) - 1)
-    order, value = optimize(cov, seed)
-    n = len(order)
-    theta = 2 * np.pi * np.arange(n) / n
-    u = z[:, order] @ (np.sqrt(2 / n) * np.cos(theta))
-    v = z[:, order] @ (np.sqrt(2 / n) * np.sin(theta))
+    result = clrcycle.fit(
+        tissue[ids], max_features=None, seed=seed, n_swaps=4000
+    )
+    coordinates = result.coordinates.set_index("sample").loc[tissue.index]
+    u = coordinates.clrcycle_cosine.to_numpy()
+    v = coordinates.clrcycle_sine.to_numpy()
     R, negerr, a, reflected, residual = align(u, v, ct)
-    eig = np.linalg.eigvalsh(cov)
+    n = len(result.feature_order)
     samples = pd.DataFrame(
         {
             "tissue": prefix,
@@ -202,10 +205,14 @@ def analyze(expr, annot, prefix, seed):
             "phase_residual_hours": residual * 24 / (2 * np.pi),
         }
     )
-    features = selected.set_index("ID_REF").loc[[ids[i] for i in order]].reset_index()
+    features = (
+        selected.set_index("ID_REF")
+        .loc[result.feature_order.feature]
+        .reset_index()
+    )
     features["tissue"] = prefix
-    features["acs_position"] = np.arange(n)
-    features["acs_angle"] = theta
+    features["acs_position"] = result.feature_order.clrcycle_position.to_numpy()
+    features["acs_angle"] = result.feature_order.clrcycle_angle.to_numpy()
     features = features[
         [
             "tissue",
@@ -228,8 +235,8 @@ def analyze(expr, annot, prefix, seed):
         "n_candidate_positive_probes": tissue.shape[1],
         "n_selected_probes": n,
         "selection_mode": "rhythmic",
-        "acs_objective": value,
-        "rho_clrcycle": value / (eig[-1] + eig[-2]),
+        "acs_objective": result.objective,
+        "rho_clrcycle": result.rho,
         "phase_agreement_r": R,
         "mean_abs_phase_error_hours": -negerr,
         "alignment_reflected": reflected,
@@ -240,4 +247,11 @@ def analyze(expr, annot, prefix, seed):
         "trough_radius_ct_mod24": lo.ct_mod24,
         "trough_radius": lo.acs_radius,
     }
-    return samples, features, scores, metrics
+    weights = result.feature_weights.copy()
+    weights["tissue"] = prefix
+    weights["ct"] = weights["sample"].map(samples.set_index("sample").ct)
+    weights["ct_mod24"] = weights["sample"].map(samples.set_index("sample").ct_mod24)
+    weights["gene_symbol"] = weights["feature"].map(
+        features.set_index("ID_REF").gene_symbol
+    )
+    return samples, features, scores, metrics, weights

@@ -37,6 +37,7 @@ DIRS = {
         "metadata",
     )
 }
+sys.path.insert(0, str(ROOT / "vendor/clrcycle"))
 import clrcycle
 
 SEED, TOP_N, TEST_SIZE, N_SWAPS = 17, 250, 0.20, 4000
@@ -526,6 +527,11 @@ def run_shared_analysis():
     tenx_z.to_csv(DIRS["transfer_10x"] / "sample_coordinates.csv", index_label="donor")
     c1_z.to_csv(DIRS["transfer_c1"] / "sample_coordinates.csv", index_label="donor")
     fit.feature_order.to_csv(DIRS["tables"] / "frozen_gene_order.csv", index=False)
+    weights = fit.feature_weights.copy()
+    weights["histology_stage"] = weights["sample"].map(train_meta.histology_stage)
+    weights["model_cycle_time"] = weights["sample"].map(train_meta.model_cycle_time)
+    weights["training_log1p_variance"] = weights["feature"].map(selected)
+    weights.to_csv(DIRS["tables"] / "feature_weights.csv.gz", index=False)
     fit.feature_order[["feature", "clrcycle_angle"]].rename(
         columns={"feature": "gene", "clrcycle_angle": "gene_angle"}
     ).to_csv(DIRS["tables"] / "gene_angles.csv", index=False)
@@ -575,6 +581,7 @@ def run_shared_analysis():
         DIRS["discovery_rnaseq"]
         / "ranked_top250_features.csv": "ranked_top250_features.csv",
         DIRS["tables"] / "frozen_gene_order.csv": "frozen_gene_order.csv",
+        DIRS["tables"] / "feature_weights.csv.gz": "endometrium_feature_weights.csv.gz",
         DIRS["tables"]
         / "gene_circle_posthoc_histology_stage.csv": "gene_circle_posthoc_histology_stage.csv",
         DIRS["tables"]

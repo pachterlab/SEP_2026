@@ -18,7 +18,8 @@ conda activate sep_2026
 | 3 | `python scripts/fig1_circadian.py` | Analyze GSE54650 circadian tissues and render Figure 1 | `results/fig1/`, `figures/Figure1.*` |
 | 4 | `python scripts/fig2_fucci.py --plot` | Analyze GSE121265 FUCCI cells, benchmark embeddings, and render Figure 2 | `results/fig2/`, `figures/Figure2.*` |
 | 5 | `python scripts/fig3_endometrium.py` | Run endometrium discovery/transfer analysis and render Figure 3 | `results/fig3/`, `figures/Figure3.*` |
-| 6 | `python scripts/supplementary_figure1_benchmarks.py --plot` | Benchmark circular ordering and harmonic distortion | `results/supp_fig1/`, `figures/Supplementary_Figure1.*` |
+| 6 | `python scripts/supplementary_feature_weights.py` | Collate native feature weights and render the liver CT10 heatmap | `results/supplementary_data/`, `figures/supp_fig1_liver_CT10_feature_weights.*` |
+| 7 | `python scripts/supplementary_figure2_benchmarks.py --plot` | Benchmark circular ordering and harmonic distortion | `results/supp_fig2/`, `figures/supp_fig2_ordering_benchmarks.*` |
 
 `make all` performs the complete sequence, including downloads. `make figures`
 assumes the public inputs are already present.
@@ -60,8 +61,10 @@ depend on the shell's current working directory. They never modify files under
   result tables without refitting.
 - `python scripts/fig2_fucci.py` runs the numerical analysis and prints the
   benchmark table; add `--plot` to render Figure 2.
-- `python scripts/supplementary_figure1_benchmarks.py` writes numerical
+- `python scripts/supplementary_figure2_benchmarks.py` writes numerical
   benchmark outputs; add `--plot` to render the supplementary figure.
+- `python scripts/supplementary_feature_weights.py` collates the native
+  per-sample feature weights and renders Supplementary Figure 1.
 
 These modes are useful when adjusting presentation while preserving validated
 numerical artifacts.

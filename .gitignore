@@ -27,3 +27,8 @@ data/processed/*
 *.log
 *.tmp
 *~
+
+# Generated supplementary-figure document
+/scripts/build_supplement.py
+/results/supplementary_data/supplement.tex
+/results/supplementary_data/supplement.pdf

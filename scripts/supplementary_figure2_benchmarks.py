@@ -1,9 +1,9 @@
-"""Reproduce Supplementary Figure 1: circular-ordering benchmarks.
+"""Reproduce Supplementary Figure 2: circular-ordering benchmarks.
 
 This downstream analysis reads validated Figure 3 artifacts, compares the
 clrcycle order with an ElPiGraph cycle, and measures harmonic distortion across
 linear, Fourier, and cyclic-spline models. Tables are written to
-``results/supp_fig1/``; ``--plot`` additionally renders the figure.
+``results/supp_fig2/``; ``--plot`` additionally renders the figure.
 """
 
 from pathlib import Path
@@ -22,11 +22,12 @@ from sklearn.decomposition import PCA
 from sklearn.linear_model import RidgeCV
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import SplineTransformer, StandardScaler
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "vendor/clrcycle"))
 import clrcycle
 
-ROOT = Path(__file__).resolve().parents[1]
 SHARED = ROOT / "results/fig3"
-OUT = ROOT / "results/supp_fig1"
+OUT = ROOT / "results/supp_fig2"
 OUT.mkdir(parents=True, exist_ok=True)
 TWO_PI = 2 * np.pi
 ALPHAS = np.logspace(-5, 5, 31)
@@ -294,7 +295,7 @@ def distortion_benchmark(clr, samples, genes):
 
 
 def plot(clr, ordering, summary, metrics, peak, clrrank, graph, projected, errors):
-    """Render all panels of Supplementary Figure 1 from saved metrics."""
+    """Render all panels of Supplementary Figure 2 from saved metrics."""
     BASE_SIZE = 18
     TITLE_SIZE = 21
     PANEL_SIZE = 24
@@ -518,7 +519,7 @@ def plot(clr, ordering, summary, metrics, peak, clrrank, graph, projected, error
     colorbar.set_label("Histology stage with maximum mean gene expression", labelpad=24)
     for ext in ("pdf", "svg", "png"):
         fig.savefig(
-            ROOT / "figures" / f"Supplementary_Figure1.{ext}",
+            ROOT / "figures" / f"supp_fig2_ordering_benchmarks.{ext}",
             dpi=300 if ext == "png" else None,
         )
     plt.close(fig)

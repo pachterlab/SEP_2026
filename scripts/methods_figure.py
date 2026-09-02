@@ -93,11 +93,18 @@ def workflow_values() -> dict[str, np.ndarray]:
     }
 
 
-def panel_title(axis: plt.Axes, number: int, title: str) -> None:
+def panel_title(
+    axis: plt.Axes,
+    number: int,
+    title: str,
+    *,
+    horizontal_position: float = 0.5,
+    vertical_position: float = 1.045,
+) -> None:
     """Add a numbered workflow title above a panel."""
     axis.text(
-        0.5,
-        1.045,
+        horizontal_position,
+        vertical_position,
         f"{number}. {title}",
         transform=axis.transAxes,
         ha="center",
@@ -211,7 +218,7 @@ def draw_composition(axis: plt.Axes, values: dict[str, np.ndarray]) -> None:
 
 def draw_covariance(axis: plt.Axes, covariance: np.ndarray, figure: plt.Figure) -> None:
     """Draw the CLR covariance matrix used by the ordering objective."""
-    panel_title(axis, 2, "Gene covariance")
+    panel_title(axis, 2, "Gene covariance", horizontal_position=0.38)
     matrix_axis = axis.inset_axes([0.02, 0.07, 0.72, 0.79])
     limit = np.abs(covariance).max()
     image = matrix_axis.imshow(covariance, cmap="coolwarm", vmin=-limit, vmax=limit)
@@ -240,7 +247,7 @@ def draw_covariance(axis: plt.Axes, covariance: np.ndarray, figure: plt.Figure) 
         fontsize=20,
         fontweight="bold",
     )
-    colorbar_axis = axis.inset_axes([0.73, 0.14, 0.038, 0.66])
+    colorbar_axis = axis.inset_axes([0.63, 0.14, 0.038, 0.66])
     colorbar = figure.colorbar(image, cax=colorbar_axis)
     colorbar.set_label("CLR covariance", fontsize=17)
     colorbar.ax.tick_params(labelsize=15)
@@ -249,7 +256,7 @@ def draw_covariance(axis: plt.Axes, covariance: np.ndarray, figure: plt.Figure) 
 
 def draw_optimize(axis: plt.Axes) -> None:
     """Illustrate evaluation of candidate circular feature orders."""
-    panel_title(axis, 3, "Optimize gene order")
+    panel_title(axis, 3, "Maximize first Fourier variance")
     axis.text(
         0.5,
         0.84,
@@ -428,7 +435,7 @@ def draw_gene_circle(
 
 def draw_fourier(axis: plt.Axes, order: np.ndarray) -> None:
     """Show the first circular Fourier weights assigned to ordered genes."""
-    panel_title(axis, 4, "First Fourier mode")
+    panel_title(axis, 4, "Gene ordered\ncircular coordinates")
     draw_gene_circle(axis, order)
     axis.text(
         0.5,
@@ -442,7 +449,12 @@ def draw_fourier(axis: plt.Axes, order: np.ndarray) -> None:
 
 def draw_projection(axis: plt.Axes, order: np.ndarray, projected: np.ndarray) -> None:
     """Draw example samples in the learned two-dimensional projection."""
-    panel_title(axis, 5, "Project cells")
+    panel_title(
+        axis,
+        5,
+        "Project cells onto\njoint feature-sample geometry",
+        vertical_position=1.075,
+    )
     draw_gene_circle(axis, order, projected=projected)
     axis.text(
         0.5,
@@ -468,11 +480,26 @@ def block_arrow(
     first, second = source.get_position(), target.get_position()
     horizontal_length = 0.032
     if downward:
-        x = (first.x0 + first.x1) / 2
-        center = (first.y0 + second.y1) / 2 + 0.01
-        vertical_length = horizontal_length * figure.get_figwidth() / figure.get_figheight()
-        start = (x, center + vertical_length / 2)
-        end = (x, center - vertical_length / 2)
+        source_point = ((first.x0 + first.x1) / 2, first.y0)
+        target_point = ((second.x0 + second.x1) / 2, second.y1)
+        center = (
+            (source_point[0] + target_point[0]) / 2,
+            (source_point[1] + target_point[1]) / 2 + 0.01,
+        )
+        width, height = figure.get_figwidth(), figure.get_figheight()
+        direction = np.array(
+            [
+                (target_point[0] - source_point[0]) * width,
+                (target_point[1] - source_point[1]) * height,
+            ]
+        )
+        direction /= np.hypot(*direction)
+        half_length = horizontal_length * width / 2
+        offset = np.array(
+            [half_length * direction[0] / width, half_length * direction[1] / height]
+        )
+        start = tuple(np.asarray(center) - offset)
+        end = tuple(np.asarray(center) + offset)
     else:
         y = ((first.y0 + first.y1) + (second.y0 + second.y1)) / 4
         if second.x0 > first.x0:
@@ -550,24 +577,29 @@ def render_figure() -> None:
     figure = plt.figure(figsize=(20, 12.8), facecolor="white")
     grid = figure.add_gridspec(
         2,
-        6,
+        12,
         left=0.05,
         right=0.95,
-        bottom=0.085,
+        bottom=0.055,
         top=0.88,
-        wspace=0.26,
-        hspace=0.36,
+        wspace=0.12,
+        hspace=0.44,
     )
     axes = [
         figure.add_subplot(grid[row, start:stop])
         for row, start, stop in (
-            (0, 0, 3),
-            (0, 3, 6),
-            (1, 4, 6),
-            (1, 2, 4),
-            (1, 0, 2),
+            (0, 1, 6),
+            (0, 6, 11),
+            (1, 8, 12),
+            (1, 4, 8),
+            (1, 0, 4),
         )
     ]
+    for axis, horizontal_shift in zip(axes[3:5], (-0.018, -0.030)):
+        position = axis.get_position()
+        axis.set_position(
+            [position.x0 + horizontal_shift, position.y0, position.width, position.height]
+        )
 
     draw_composition(axes[0], values)
     draw_covariance(axes[1], values["covariance"], figure)
