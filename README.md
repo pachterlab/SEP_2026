@@ -35,8 +35,6 @@ conda env create -f environment.yml
 conda activate sep_2026
 ```
 
-The paper version of `clrcycle` is included under `vendor/clrcycle`.
-
 ## Download and prepare data
 
 From the repository root, run:
@@ -111,7 +109,6 @@ SEP_2026/
 │   ├── fig3_endometrium.py
 │   ├── supplementary_feature_weights.py
 │   └── supplementary_figure2_benchmarks.py
-├── vendor/clrcycle/         # paper version of clrcycle
 ├── environment.yml
 └── Makefile
 ```
