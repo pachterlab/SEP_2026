@@ -23,6 +23,43 @@ import clrcycle
 OUT = ROOT / "results/supplementary_data"
 FIGURES = ROOT / "figures"
 EXCEL_MAX_DATA_ROWS = 1_048_575
+ENDOMETRIUM_STAGES = {
+    1: "Menstrual",
+    2: "Early proliferative",
+    3: "Mid proliferative",
+    4: "Late proliferative",
+    5: "Early secretory",
+    6: "Mid secretory",
+    7: "Late secretory",
+}
+
+
+def add_sample_annotations(tables):
+    """Add explicit, consistently named sample annotations to each table."""
+    circadian = tables["Circadian"]
+    circadian["annotation_type"] = "circadian collection time"
+    circadian["annotated_stage_or_phase"] = circadian.ct_mod24.map(
+        lambda value: f"CT{value:g}"
+    )
+    circadian["annotated_cycle_position"] = circadian.ct_mod24
+    circadian["annotated_cycle_units"] = "CT hours modulo 24"
+
+    fucci = tables["FUCCI"]
+    fucci["annotation_type"] = "measured FUCCI phase"
+    fucci["annotated_stage_or_phase"] = fucci.measured_fucci_theta.map(
+        lambda value: f"{value:.3f} rad"
+    )
+    fucci["annotated_cycle_position"] = fucci.measured_fucci_theta
+    fucci["annotated_cycle_units"] = "radians modulo 2pi"
+
+    endometrium = tables["Endometrium"]
+    stage_name = endometrium.histology_stage.map(ENDOMETRIUM_STAGES)
+    endometrium["annotation_type"] = "histology stage and model cycle time"
+    endometrium["annotated_stage_or_phase"] = (
+        endometrium.histology_stage.astype(int).astype(str) + " " + stage_name
+    )
+    endometrium["annotated_cycle_position"] = endometrium.model_cycle_time
+    endometrium["annotated_cycle_units"] = "model cycle time (0-100)"
 
 
 def metadata_tables(tables):
@@ -30,15 +67,31 @@ def metadata_tables(tables):
     circadian = tables["Circadian"]
     fucci = tables["FUCCI"]
     endometrium = tables["Endometrium"]
+    annotation = [
+        "annotation_type",
+        "annotated_stage_or_phase",
+        "annotated_cycle_position",
+        "annotated_cycle_units",
+    ]
     samples = pd.concat(
         [
-            circadian[["sample", "tissue", "ct", "ct_mod24"]]
+            circadian[["sample", "tissue", "ct", "ct_mod24", *annotation]]
             .drop_duplicates()
             .assign(dataset="Circadian"),
-            fucci[["sample", "measured_fucci_theta", "experiment", "chip_id"]]
+            fucci[
+                [
+                    "sample",
+                    "measured_fucci_theta",
+                    "experiment",
+                    "chip_id",
+                    *annotation,
+                ]
+            ]
             .drop_duplicates()
             .assign(dataset="FUCCI"),
-            endometrium[["sample", "histology_stage", "model_cycle_time"]]
+            endometrium[
+                ["sample", "histology_stage", "model_cycle_time", *annotation]
+            ]
             .drop_duplicates()
             .assign(dataset="Endometrium"),
         ],
@@ -177,6 +230,7 @@ def main():
         key: pd.read_csv(path, dtype={"feature": str})
         for key, path in sources.items()
     }
+    add_sample_annotations(tables)
     reconstruction_errors = {}
     for key, table in tables.items():
         group = ["sample"] if key != "Circadian" else ["tissue", "sample"]
@@ -204,12 +258,20 @@ def main():
                 "Definition",
                 "Interpretation",
                 "Reconstruction",
+                "Sample annotation columns",
+                "Circadian annotation",
+                "FUCCI annotation",
+                "Endometrium annotation",
                 *[f"{key} full table" for key in tables],
             ],
             "description": [
                 "w_ig = Z_ig (c_g cos(phi_i) + s_g sin(phi_i))",
                 "Per-sample feature contribution to the radial first-Fourier projection.",
                 "Feature weights sum to the sample clrcycle radius.",
+                "annotation_type, annotated_stage_or_phase, annotated_cycle_position, and annotated_cycle_units identify the biological reference for every sample.",
+                "annotated_stage_or_phase is CT modulo 24; ct retains the original collection time.",
+                "annotated_cycle_position is the measured FUCCI phase in radians modulo 2pi.",
+                "annotated_stage_or_phase gives the numbered histology stage and name; annotated_cycle_position gives model cycle time on 0-100.",
                 *[
                     f"Workbook sheet {sheet_names[key]}; complete machine-readable file {names[key]}."
                     if included[key]
