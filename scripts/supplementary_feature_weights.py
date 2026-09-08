@@ -14,7 +14,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.colors import TwoSlopeNorm
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "vendor/clrcycle"))
@@ -22,6 +21,7 @@ import clrcycle
 
 OUT = ROOT / "results/supplementary_data"
 FIGURES = ROOT / "figures"
+FIG1_OUT = ROOT / "results/supp_fig1"
 EXCEL_MAX_DATA_ROWS = 1_048_575
 ENDOMETRIUM_STAGES = {
     1: "Menstrual",
@@ -136,6 +136,7 @@ def metadata_tables(tables):
 
 def liver_figure():
     """Render the complete ordered CT10 liver feature-weight decomposition."""
+    FIG1_OUT.mkdir(parents=True, exist_ok=True)
     liver_dir = ROOT / "results/fig1/liver"
     weights = pd.read_csv(
         liver_dir / "liver_feature_weights.csv.gz", dtype={"feature": str}
@@ -163,14 +164,26 @@ def liver_figure():
         raise RuntimeError("CT10 feature weights do not reconstruct sample radii")
 
     mean_weight = full.groupby("clrcycle_position")["feature_weight"].mean()
-    positive = mean_weight.nlargest(25).index
-    negative = mean_weight.nsmallest(25).index
+    candidates = order.reset_index(drop=True).copy()
+    candidates["display_gene"] = [
+        str(symbol).split("///")[0].strip() or str(probe)
+        for symbol, probe in zip(candidates.gene_symbol.fillna(""), candidates.ID_REF)
+    ]
+    candidates["mean_weight"] = mean_weight.reindex(candidates.index)
+    candidates["absolute_mean_weight"] = candidates.mean_weight.abs()
+    representatives = candidates.sort_values(
+        "absolute_mean_weight", ascending=False, kind="stable"
+    ).drop_duplicates("display_gene")
+    positive = representatives.nlargest(25, "mean_weight").index
+    negative = representatives.nsmallest(25, "mean_weight").index
     positions = np.sort(np.r_[positive, negative])
     if len(np.unique(positions)) != 50:
-        raise RuntimeError("Positive and negative CT10 marker sets overlap")
+        raise RuntimeError("Expected 50 distinct CT10 genes")
+    if candidates.loc[positions, "display_gene"].duplicated().any():
+        raise RuntimeError("Repeated gene labels in CT10 heatmap")
     subset = full[full["clrcycle_position"].isin(positions)].copy()
     subset["sample"] = subset["sample"].astype(str)
-    subset.to_csv(OUT / "liver_CT10_feature_weights.csv", index=False)
+    subset.to_csv(FIG1_OUT / "liver_CT10_feature_weights.csv", index=False)
 
     matrix = np.column_stack(
         [
@@ -193,7 +206,8 @@ def liver_figure():
         aspect="auto",
         interpolation="nearest",
         cmap="RdBu_r",
-        norm=TwoSlopeNorm(vmin=matrix.min(), vcenter=0, vmax=matrix.max()),
+        vmin=-0.2,
+        vmax=0.2,
     )
     ax.set_xticks(np.arange(2), labels=ct10_ids, fontsize=9)
     ax.set_yticks(np.arange(len(labels)), labels=labels, fontsize=6.5)
@@ -206,7 +220,7 @@ def liver_figure():
     ax.title.set_fontweight("bold")
     colorbar = fig.colorbar(image, ax=ax, pad=0.025, shrink=0.35)
     colorbar.set_label("Signed feature weight")
-    colorbar.set_ticks([matrix.min(), 0, matrix.max() / 2, matrix.max()])
+    colorbar.set_ticks(np.linspace(-0.2, 0.2, 5))
     for suffix in ("pdf", "svg", "png"):
         fig.savefig(
             FIGURES / f"supp_fig1_liver_CT10_feature_weights.{suffix}",
@@ -215,6 +229,68 @@ def liver_figure():
         )
     plt.close(fig)
     return ct10_ids, len(positions), float(radius_error.max())
+
+
+def collate_ellipses():
+    """Collect all plotted clrcycle cohorts and their vertex interpretations."""
+    circadian = pd.read_csv(ROOT / "results/fig1/all_tissues/ellipse_geometry.csv", float_precision="round_trip")
+    circadian = circadian.assign(dataset="Circadian", fit_id=circadian.tissue,
+                                metadata_reference="CT", figure_panel="Figure1 tissue panels")
+    liver = pd.read_csv(ROOT / "results/fig1/liver/ellipse_geometry.csv", float_precision="round_trip").assign(
+        dataset="Circadian", fit_id="Liv_liver_panel", metadata_reference="CT", figure_panel="Figure1 A")
+    fucci = pd.read_csv(ROOT / "results/fig2/ellipse_geometry.csv", float_precision="round_trip").assign(
+        dataset="FUCCI", fit_id="GSE121265", metadata_reference="FUCCI phase", figure_panel="Figure2 B")
+    endometrium = pd.read_csv(ROOT / "results/fig3/training_ellipse_geometry.csv", float_precision="round_trip")
+    endometrium = endometrium.assign(dataset="Endometrium", fit_id=endometrium.cohort,
+                                   figure_panel="Figure3")
+    geometry = pd.concat([circadian, liver, fucci, endometrium], ignore_index=True)
+    geometry["significant_anisotropy"] = geometry.anisotropy_pvalue.lt(.05)
+    phase_columns = [c for c in geometry if c.startswith("major_vertex_")
+                     and (c.endswith("_metadata") or c.endswith("_stage"))]
+    geometry.loc[~geometry.significant_anisotropy, phase_columns] = np.nan
+    ids = ["dataset", "fit_id", "metadata_reference", "figure_panel"]
+    geometry = geometry[ids + [c for c in geometry if c not in ids]]
+    vertices = []
+    for _, row in geometry.iterrows():
+        for name in ("major_vertex_1", "major_vertex_2", "minor_vertex_1", "minor_vertex_2"):
+            vertex = {key: row[key] for key in ids}
+            vertex.update(vertex=name, metadata_units=row.metadata_units)
+            vertex.update({key.removeprefix(name+"_"): value for key, value in row.items() if key.startswith(name+"_")})
+            vertices.append(vertex)
+    vertices = pd.DataFrame(vertices)
+    geometry.to_csv(OUT / "ellipse_geometry.csv", index=False)
+    vertices.to_csv(OUT / "ellipse_vertices.csv", index=False)
+    return geometry, vertices
+
+
+def write_workbook(path, geometry, table):
+    """Write ellipse features and feature weights, separating circadian tissues."""
+    from openpyxl.comments import Comment
+
+    with pd.ExcelWriter(path, engine="openpyxl") as writer:
+        geometry.to_excel(writer, sheet_name="Ellipse_features", index=False)
+        if "tissue" in table:
+            labels = geometry.dropna(subset=["tissue", "label"]).set_index("tissue")["label"].to_dict()
+            for tissue, weights in table.groupby("tissue", sort=False):
+                weights.to_excel(writer, sheet_name=labels[tissue], index=False)
+        else:
+            table.to_excel(writer, sheet_name="Feature_weights", index=False)
+        notes = {
+            "axis_ratio": "b/a: minor semiaxis divided by major semiaxis; 1 denotes a circle.",
+            "displacement_ratio": "d/a: distance of the ellipse center from the origin divided by the major semiaxis.",
+            "feature_weight": "Signed contribution to the sample radius. Feature weights sum to the sample clrcycle radius.",
+            "metadata_reference": "Reference used to label ellipse vertices. Repeated references for one cohort share the same intrinsic geometry. Endometrium ellipse results describe training biopsies only.",
+            "orientation": "Major-axis orientation in radians modulo pi about the fitted center. Geometry retains raw clrcycle units.",
+            "anisotropy_pvalue": "Radius-preserving random-angle test of anisotropy: 1000 randomizations, seed 17; no multiple-testing adjustment. Major-vertex phase/stage values are omitted unless p < 0.05. This does not test general cyclicity.",
+        }
+        for sheet in writer.book.worksheets:
+            sheet.freeze_panes = "A2"
+            sheet.auto_filter.ref = sheet.dimensions
+            sheet.sheet_view.showGridLines = False
+            for cell in sheet[1]:
+                if cell.value in notes:
+                    cell.comment = Comment(notes[cell.value], "clrcycle")
+                sheet.column_dimensions[cell.column_letter].width = min(36, max(14, len(cell.value) + 2))
 
 
 def main():
@@ -242,64 +318,19 @@ def main():
         if not np.allclose(error, 0, rtol=0, atol=1e-12):
             raise RuntimeError(f"{key} feature weights do not reconstruct sample radii")
         table.to_csv(OUT / names[key], index=False)
-    sample_metadata, feature_metadata = metadata_tables(tables)
-    workbook = OUT / "Supplementary_Data_clrcycle_feature_weights.xlsx"
-    sheet_names = {
-        "Circadian": "Circadian_feature_weights",
-        "FUCCI": "FUCCI_feature_weights",
-        "Endometrium": "Endometrium_feature_weights",
+    ellipse_geometry, ellipse_vertices = collate_ellipses()
+    workbook_names = {
+        "Circadian": "Supplementary_Data_1_GSE54650.xlsx",
+        "FUCCI": "Supplementary_Data_2_GSE121265.xlsx",
+        "Endometrium": "Supplementary_Data_3_GSE234354_GSE111976.xlsx",
     }
-    included = {
-        key: len(table) <= EXCEL_MAX_DATA_ROWS for key, table in tables.items()
-    }
-    readme = pd.DataFrame(
-        {
-            "item": [
-                "Definition",
-                "Interpretation",
-                "Reconstruction",
-                "Sample annotation columns",
-                "Circadian annotation",
-                "FUCCI annotation",
-                "Endometrium annotation",
-                *[f"{key} full table" for key in tables],
-            ],
-            "description": [
-                "w_ig = Z_ig (c_g cos(phi_i) + s_g sin(phi_i))",
-                "Per-sample feature contribution to the radial first-Fourier projection.",
-                "Feature weights sum to the sample clrcycle radius.",
-                "annotation_type, annotated_stage_or_phase, annotated_cycle_position, and annotated_cycle_units identify the biological reference for every sample.",
-                "annotated_stage_or_phase is CT modulo 24; ct retains the original collection time.",
-                "annotated_cycle_position is the measured FUCCI phase in radians modulo 2pi.",
-                "annotated_stage_or_phase gives the numbered histology stage and name; annotated_cycle_position gives model cycle time on 0-100.",
-                *[
-                    f"Workbook sheet {sheet_names[key]}; complete machine-readable file {names[key]}."
-                    if included[key]
-                    else f"Excel row limit exceeded; compact index in workbook and complete table in {names[key]}."
-                    for key in tables
-                ],
-            ],
-        }
-    )
-    with pd.ExcelWriter(workbook, engine="openpyxl") as writer:
-        readme.to_excel(writer, sheet_name="README", index=False)
-        for key, table in tables.items():
-            if included[key]:
-                table.to_excel(writer, sheet_name=sheet_names[key], index=False)
-            else:
-                pd.DataFrame(
-                    {
-                        "full_table": [names[key]],
-                        "rows": [len(table)],
-                        "columns": [len(table.columns)],
-                    }
-                ).to_excel(writer, sheet_name=sheet_names[key], index=False)
-        sample_metadata.to_excel(writer, sheet_name="Sample_metadata", index=False)
-        feature_metadata.to_excel(writer, sheet_name="Feature_metadata", index=False)
-        for sheet in writer.book.worksheets:
-            sheet.freeze_panes = "A2"
-            sheet.auto_filter.ref = sheet.dimensions
-            sheet.sheet_view.showGridLines = False
+    included = {key: len(table) <= EXCEL_MAX_DATA_ROWS for key, table in tables.items()}
+    for key, table in tables.items():
+        if not included[key]:
+            raise RuntimeError(f"{key} feature weights exceed the Excel row limit")
+        geometry = ellipse_geometry.loc[ellipse_geometry.dataset.eq(key)].dropna(axis=1, how="all").copy()
+        geometry["displacement_ratio"] = geometry.ellipse_center_distance / geometry.major_semiaxis
+        write_workbook(OUT / workbook_names[key], geometry, table)
 
     ct10_ids, plotted_features, ct10_error = liver_figure()
     audit = {
@@ -321,11 +352,14 @@ def main():
             }
             for key, table in tables.items()
         },
-        "workbook": str(workbook),
+        "workbooks": {key: str(OUT / name) for key, name in workbook_names.items()},
+        "ellipse_summary_rows": len(ellipse_geometry),
+        "ellipse_vertex_rows": len(ellipse_vertices),
         "liver_CT10_sample_ids": ct10_ids,
         "liver_CT10_features_plotted": plotted_features,
         "liver_CT10_selection": (
-            "25 highest and 25 lowest mean feature weights across both replicates"
+            "One probe per displayed gene, chosen by largest absolute mean weight; "
+            "25 highest and 25 lowest mean weights across both replicates"
         ),
         "rows_follow_clrcycle_order": True,
         "liver_CT10_max_radius_error": ct10_error,

@@ -18,11 +18,14 @@ conda activate sep_2026
 | 3 | `python scripts/fig1_circadian.py` | Analyze GSE54650 circadian tissues and render Figure 1 | `results/fig1/`, `figures/Figure1.*` |
 | 4 | `python scripts/fig2_fucci.py --plot` | Analyze GSE121265 FUCCI cells, benchmark embeddings, and render Figure 2 | `results/fig2/`, `figures/Figure2.*` |
 | 5 | `python scripts/fig3_endometrium.py` | Run endometrium discovery/transfer analysis and render Figure 3 | `results/fig3/`, `figures/Figure3.*` |
-| 6 | `python scripts/supplementary_feature_weights.py` | Collate native feature weights and render the liver CT10 heatmap | `results/supplementary_data/`, `figures/supp_fig1_liver_CT10_feature_weights.*` |
+| 6 | `python scripts/supplementary_feature_weights.py` | Collate native feature weights and render the liver CT10 heatmap | `results/supp_fig1/`, `results/supplementary_data/`, `figures/supp_fig1_liver_CT10_feature_weights.*` |
 | 7 | `python scripts/supplementary_figure2_benchmarks.py --plot` | Benchmark circular ordering and harmonic distortion | `results/supp_fig2/`, `figures/supp_fig2_ordering_benchmarks.*` |
+| 8 | `python scripts/build_supplement.py` | Assemble the supplementary-figure PDF | `results/supplementary_data/supplement.pdf` |
 
 `make all` performs the complete sequence, including downloads. `make figures`
 assumes the public inputs are already present.
+`make supplements` runs steps 6--8 from existing main-analysis results.
+
 
 ## Script structure
 
@@ -35,6 +38,21 @@ lives in `scripts/lib/`:
   transfer.
 - `lib/common.py` contains general parsing, projection, circular-statistics,
   styling, and provenance helpers.
+
+The sample panels use the core package's raw-coordinate ellipse fit. Ellipse
+curves and vertices undergo only the existing plotting rotation/reflection.
+Each analysis writes `results/fig1/ellipse_geometry.csv`,
+`results/fig2/ellipse_geometry.csv`, or `results/fig3/training_ellipse_geometry.csv`.
+Circadian also saves separate liver and atlas tables in its existing subfolders.
+Three supplementary workbooks group results by analysis: circadian
+(GSE54650), FUCCI (GSE121265), and endometrium (GSE234354/GSE111976).
+Each has an `Ellipse_features` tab with vertex coordinates and metadata.
+Circadian feature weights have one tab per tissue; FUCCI and endometrium each
+have a single `Feature_weights` tab. Combined ellipse CSV files are also saved.
+Endometrium ellipses are computed only for the training projection in panels A and C.
+Held-out and transfer panels have no ellipse fits. Anisotropy p-values use
+1,000 radius-preserving random-angle draws with seed 17, without multiplicity
+adjustment; leave-one-out columns report robustness, not significance.
 
 Each analysis follows the same broad sequence:
 

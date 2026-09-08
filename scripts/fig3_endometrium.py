@@ -25,7 +25,7 @@ from matplotlib.lines import Line2D
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from lib import endometrium
-from lib.common import write_versions
+from lib.common import write_versions, draw_ellipse, ellipse_legend_handles, ellipse_stats_box
 
 
 def render_figures() -> None:
@@ -40,6 +40,7 @@ def render_figures() -> None:
     genes = pd.read_csv(clean / "gene_circle_posthoc_histology_stage.csv")
     metrics = pd.read_csv(clean / "summary_metrics.csv", index_col=0)
     summary = json.loads((clean / "summary.json").read_text())
+    ellipses = pd.read_csv(clean / "training_ellipse_geometry.csv").set_index(["cohort", "metadata_reference"])
     cmap = ListedColormap(endometrium.STAGE_COLORS)
     norm = BoundaryNorm(np.arange(0.5, 8.5), 7)
 
@@ -95,12 +96,20 @@ def render_figures() -> None:
         edgecolor=".3",
         lw=0.3,
     )
-    med = float(np.median(train.radius))
     for letter, ax, title in (
         ("A", hist_ax, "Histological stage"),
         ("C", time_ax, "Authors' molecular-model time"),
     ):
-        ax.add_patch(plt.Circle((0, 0), med, fill=False, ls="--", lw=0.8, color=".5"))
+        reference = "stage" if letter == "A" else "model_time"
+        geometry = ellipses.loc[("rnaseq_train", reference)]
+        names = ("major_vertex_1", "major_vertex_2", "minor_vertex_1", "minor_vertex_2")
+        values = [geometry[n+"_stage"] if letter == "A" else geometry[n+"_metadata"] for n in names]
+        labels = [f"{int(v)} {endometrium.STAGE_NAMES[int(v)-1]}" if letter == "A" else f"Time {v:.1f}" for v in values]
+        colors = [cmap(norm(v)) if letter == "A" else time_cmap(v/100) for v in values]
+        draw_ellipse(ax, geometry, train[["raw_cosine", "raw_sine"]].to_numpy(),
+                     train[["clrcycle_cosine", "clrcycle_sine"]].to_numpy(),
+                     labels=labels, colors=colors, fontsize=9)
+        ellipse_stats_box(ax, geometry, fontsize=11)
         ax.axhline(0, color=".85", lw=0.5)
         ax.axvline(0, color=".85", lw=0.5)
         ax.set_aspect("equal", adjustable="box")
@@ -114,13 +123,9 @@ def render_figures() -> None:
             fontweight="bold",
         )
         ax.legend(
-            handles=[
-                Line2D(
-                    [], [], color=".5", ls="--", lw=1.2, label="Median sample radius"
-                )
-            ],
+            handles=ellipse_legend_handles(),
             loc="upper right",
-            fontsize=13,
+            fontsize=10,
             frameon=True,
             framealpha=0.68,
             facecolor="white",
@@ -354,7 +359,7 @@ def render_figures() -> None:
                     [],
                     [],
                     marker="o",
-                    markersize=13,
+                    markersize=7,
                     ls="",
                     color=".45",
                     markerfacecolor=".65",
@@ -367,7 +372,7 @@ def render_figures() -> None:
                 ),
             ],
             loc="upper right",
-            fontsize=14,
+            fontsize=9,
             frameon=True,
             framealpha=0.68,
             facecolor="white",

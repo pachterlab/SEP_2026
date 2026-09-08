@@ -15,6 +15,7 @@ from umap import UMAP
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "vendor/clrcycle"))
 import clrcycle
+from lib.common import paper_ellipse
 
 TWO_PI = 2 * np.pi
 SEED = 17
@@ -168,6 +169,9 @@ def run_clrcycle(expression, ranking, meta, out):
         "seed": SEED,
         "n_swaps": N_SWAPS,
     }
+    ellipse = paper_ellipse(result, theta, period=TWO_PI, units="FUCCI phase radians",
+                            alignment=(rotation, reflected))
+    pd.DataFrame([ellipse]).to_csv(out / "ellipse_geometry.csv", index=False)
     pd.DataFrame([metrics]).to_csv(out / "clrcycle_metrics.csv", index=False)
     return {
         "cells": cells,
@@ -177,6 +181,7 @@ def run_clrcycle(expression, ranking, meta, out):
         "theta": theta,
         "metrics": metrics,
         "feature_weights": weights,
+        "ellipse": ellipse,
     }
 
 

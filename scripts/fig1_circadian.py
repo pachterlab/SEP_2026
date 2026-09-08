@@ -27,6 +27,7 @@ from matplotlib.lines import Line2D
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from lib.circadian import analyze, prefixes, read_annotation, read_matrix
+from lib.common import draw_ellipse, ellipse_legend_handles
 
 RAW = ROOT / "data/raw/GSE54650"
 OUT = ROOT / "results/fig1/all_tissues"
@@ -46,9 +47,8 @@ def circadian_cmap():
     )
 
 
-def sample_projection(ax, table, cmap, labels=False):
+def sample_projection(ax, table, cmap, labels=False, geometry=None):
     """Draw one tissue's aligned sample projection on ``ax``."""
-    median_radius = float(table.acs_radius.median())
     sc = ax.scatter(
         table.acs_u_aligned,
         table.acs_v_aligned,
@@ -65,44 +65,12 @@ def sample_projection(ax, table, cmap, labels=False):
     ax.plot(
         ordered.acs_u_aligned, ordered.acs_v_aligned, color=".68", lw=0.55, zorder=1
     )
-    ax.add_patch(
-        plt.Circle(
-            (0, 0),
-            median_radius,
-            fill=False,
-            color=".5",
-            ls="--",
-            lw=0.65,
-            zorder=0,
-        )
-    )
-    # The phase alignment places CT0 on +x and CT12 on -x. Mark those two
-    # reference phases on the median-radius circle in every sample projection.
-    tick_half_length = 0.045 * median_radius
-    tick_inner = 0.96 * median_radius
-    tick_outer = 1.04 * median_radius
-    tick_fontsize = 12 if labels else 8.5
-    for direction, phase_label in ((1, "CT0"), (-1, "CT12")):
-        ax.plot(
-            [direction * tick_inner, direction * tick_outer],
-            [0, 0],
-            color="black",
-            lw=1.2 if labels else 0.9,
-            solid_capstyle="butt",
-            zorder=5,
-        )
-        ax.annotate(
-            phase_label,
-            xy=(direction * (tick_outer + tick_half_length), 0),
-            xytext=(2 * direction, 3),
-            textcoords="offset points",
-            ha="left" if direction > 0 else "right",
-            va="bottom",
-            fontsize=tick_fontsize,
-            fontweight="bold",
-            color="black",
-            zorder=6,
-        )
+    names = ("major_vertex_1", "major_vertex_2", "minor_vertex_1", "minor_vertex_2")
+    phases = [geometry[name+"_metadata"] for name in names]
+    draw_ellipse(ax, geometry, table[["acs_u", "acs_v"]].to_numpy(),
+                 table[["acs_u_aligned", "acs_v_aligned"]].to_numpy(),
+                 labels=[f"CT{value:.1f}" for value in phases],
+                 colors=[cmap(value/24) for value in phases], fontsize=9 if labels else 6.5)
     if labels:
         for row in table.itertuples():
             ax.text(
@@ -117,7 +85,7 @@ def sample_projection(ax, table, cmap, labels=False):
             )
     ax.axhline(0, color=".88", lw=0.45)
     ax.axvline(0, color=".88", lw=0.45)
-    ax.set_aspect("equal", adjustable="datalim")
+    ax.set_aspect("equal", adjustable="box")
     return sc
 
 
@@ -296,7 +264,7 @@ def render_figure1(expression):
     )
     top = outer[0].subgridspec(1, 3, width_ratios=(1.18, 1.02, 0.78), wspace=0.20)
     ax = fig.add_subplot(top[0, 0])
-    sc = sample_projection(ax, samples, cmap, True)
+    sc = sample_projection(ax, samples, cmap, True, metrics)
     ax.set(
         title=rf"Liver samples ($\boldsymbol{{\rho}}_{{\mathbf{{clrcycle}}}}$={metrics.rho_clrcycle:.3f}, R={metrics.phase_agreement_r:.3f})",
         xlabel="ACS cosine coordinate",
@@ -312,9 +280,7 @@ def render_figure1(expression):
         va="bottom",
     )
     ax.legend(
-        handles=[
-            Line2D([], [], color=".5", ls="--", lw=1.2, label="Median sample radius")
-        ],
+        handles=ellipse_legend_handles(),
         loc="upper right",
         frameon=True,
         framealpha=0.75,
@@ -381,19 +347,18 @@ def render_figure1(expression):
         axis = fig.add_subplot(tissue_grid[i // 6, i % 6])
         grid_axes.append(axis)
         subset = pooled[pooled.tissue == row.tissue]
-        sc2 = sample_projection(axis, subset, cmap, False)
+        sc2 = sample_projection(axis, subset, cmap, False, row)
         axis.set_xlabel("ACS cosine", fontsize=11)
         axis.set_ylabel("ACS sine", fontsize=11)
         axis.tick_params(labelsize=10)
         axis.set_title(
             f"{row.label}\n"
-            + rf"$\boldsymbol{{\rho}}_{{\mathbf{{clrcycle}}}}$={row.rho_clrcycle:.2f}, R={row.phase_agreement_r:.2f}"
-            + f"\npeak CT{int(row.peak_radius_ct_mod24)}",
+            + rf"$\boldsymbol{{\rho}}_{{\mathbf{{clrcycle}}}}$={row.rho_clrcycle:.2f}, R={row.phase_agreement_r:.2f}",
             fontsize=11.5,
             pad=3,
         )
         axis.text(
-            -0.15,
+            -0.55 if row.tissue == "Hyp" else -0.15,
             1.18,
             chr(ord("F") + i),
             transform=axis.transAxes,
@@ -444,6 +409,8 @@ def main():
     )
     liver_scores.to_csv(liver_out / "liver_harmonic_feature_scores.csv", index=False)
     pd.DataFrame([liver_metrics]).to_csv(liver_out / "liver_metrics.csv", index=False)
+    liver_geometry = pd.DataFrame([liver_metrics]).assign(fit_id="Liv_liver_panel")
+    liver_geometry.to_csv(liver_out / "ellipse_geometry.csv", index=False)
     liver_weights.to_csv(liver_out / "liver_feature_weights.csv.gz", index=False)
     samples = []
     features = []
@@ -473,8 +440,14 @@ def main():
     )
     table = pd.DataFrame(metrics)
     table.to_csv(OUT / "all_tissue_metrics.csv", index=False)
+    atlas_geometry = table.assign(fit_id=table.tissue)
+    atlas_geometry.to_csv(OUT / "ellipse_geometry.csv", index=False)
+    pd.concat([atlas_geometry, liver_geometry], ignore_index=True).to_csv(
+        ROOT / "results/fig1/ellipse_geometry.csv", index=False
+    )
     render_figure1(expression)
-    print(table.to_string(index=False))
+    print(table[["tissue", "rho_clrcycle", "phase_agreement_r", "major_semiaxis",
+                 "minor_semiaxis", "axis_ratio", "anisotropy_pvalue"]].to_string(index=False))
 
 
 if __name__ == "__main__":

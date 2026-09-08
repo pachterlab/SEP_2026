@@ -16,11 +16,23 @@ This repository contains the data-processing, analysis, benchmarking, and figure
 | Supplementary Figure 2 | Circular-ordering and harmonic-distortion benchmarks | `scripts/supplementary_figure2_benchmarks.py` |
 
 Figures are written to `figures/` as PDF, SVG, and 300-dpi PNG files. Numerical outputs are written to the corresponding directory under `results/`.
-The three complete native feature-weight tables and submission workbook are
-written to `results/supplementary_data/` as
-`Supplementary_Data_clrcycle_feature_weights.xlsx` and the corresponding
-`circadian_feature_weights.csv.gz`, `fucci_feature_weights.csv.gz`, and
-`endometrium_feature_weights.csv.gz` files.
+Three submission workbooks are written to `results/supplementary_data/`:
+
+- `Supplementary_Data_1_GSE54650.xlsx`: circadian tissues.
+- `Supplementary_Data_2_GSE121265.xlsx`: FUCCI cells.
+- `Supplementary_Data_3_GSE234354_GSE111976.xlsx`: endometrium training and transfer cohorts.
+
+Each workbook has an `Ellipse_features` tab containing ellipse geometry,
+diagnostics, and all four vertices with their metadata. Supplement 1 has a
+separate feature-weight tab for each tissue; Supplements 2 and 3 each have one
+`Feature_weights` tab. These contain complete sample-by-feature weights and annotations. Column-header
+comments explain key quantities. Endometrium ellipse rows and feature weights describe the training biopsies only.
+Major-vertex timing is reported only when the anisotropy test has $p<0.05$;
+raw fitted coordinates remain available for diagnostics.
+The corresponding compressed feature-weight CSVs and combined
+`ellipse_geometry.csv` and `ellipse_vertices.csv` remain available.
+Per-analysis ellipse tables are saved as `results/fig1/ellipse_geometry.csv`,
+`results/fig2/ellipse_geometry.csv`, and `results/fig3/training_ellipse_geometry.csv`.
 
 See [`scripts/README.md`](scripts/README.md) for the execution order, inputs,
 outputs, fast rerun modes, shared-library map, and reproducibility notes for
@@ -78,7 +90,12 @@ python scripts/supplementary_feature_weights.py
 # Supplementary Figure 2: ordering and distortion benchmarks
 python scripts/supplementary_figure2_benchmarks.py --plot
 
+# Assemble the supplement document
+python scripts/build_supplement.py
 ```
+
+`make supplements` rebuilds both supplementary figures, data workbooks,
+and the supplement PDF from existing main-analysis results.
 
 Figure 1 can also be redrawn from existing numerical results without rerunning its analysis:
 
@@ -100,6 +117,7 @@ SEP_2026/
 │   ├── fig2/                # FUCCI outputs
 │   ├── fig3/                # endometrium outputs
 │   ├── supplementary_data/  # collated native feature weights
+│   ├── supp_fig1/           # CT10 heatmap data
 │   └── supp_fig2/           # benchmark outputs
 ├── scripts/
 │   ├── lib/                 # shared analysis functions

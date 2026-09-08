@@ -1,4 +1,4 @@
-.PHONY: data figures all
+.PHONY: data figures supplements all
 
 PYTHON := python
 
@@ -10,7 +10,11 @@ figures:
 	$(PYTHON) scripts/fig1_circadian.py
 	$(PYTHON) scripts/fig2_fucci.py --plot
 	$(PYTHON) scripts/fig3_endometrium.py
+	$(MAKE) supplements PYTHON="$(PYTHON)"
+
+supplements:
 	$(PYTHON) scripts/supplementary_feature_weights.py
 	$(PYTHON) scripts/supplementary_figure2_benchmarks.py --plot
+	$(PYTHON) scripts/build_supplement.py
 
 all: data figures

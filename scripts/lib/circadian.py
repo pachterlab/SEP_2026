@@ -10,6 +10,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "vendor/clrcycle"))
 import clrcycle
+from lib.common import paper_ellipse
 
 LABELS = {
     "Adr": "Adrenal",
@@ -247,6 +248,8 @@ def analyze(expr, annot, prefix, seed):
         "trough_radius_ct_mod24": lo.ct_mod24,
         "trough_radius": lo.acs_radius,
     }
+    ellipse = paper_ellipse(result, ct, period=24, units="CT hours modulo 24")
+    metrics.update(ellipse)
     weights = result.feature_weights.copy()
     weights["tissue"] = prefix
     weights["ct"] = weights["sample"].map(samples.set_index("sample").ct)

@@ -21,6 +21,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
+from lib.common import draw_ellipse, ellipse_legend_handles, ellipse_stats_box
 from lib.fucci import (
     TWO_PI,
     extract_source_tables,
@@ -182,18 +183,15 @@ _b_metrics = (
     f"R={_clrcycle_row.circular_agreement:.3f}, "
     f"distance stress={_clrcycle_row.distance_stress:.3f}"
 )
-median = float(np.median(cells.clrcycle_radius))
-cell_ax.add_patch(
-    plt.Circle(
-        (0, 0),
-        median,
-        fill=False,
-        ls="--",
-        lw=1,
-        color=".45",
-        label="Median cell radius",
-    )
-)
+ellipse = analysis["ellipse"]
+vertex_names = ("major_vertex_1", "major_vertex_2", "minor_vertex_1", "minor_vertex_2")
+vertex_phases = [ellipse[name+"_metadata"] for name in vertex_names]
+draw_ellipse(cell_ax, ellipse,
+             cells[["clrcycle_cosine_raw", "clrcycle_sine_raw"]].to_numpy(),
+             cells[["clrcycle_cosine_aligned", "clrcycle_sine_aligned"]].to_numpy(),
+             labels=[rf"$\theta={value / np.pi:.2f}\pi$" for value in vertex_phases],
+             colors=[cmap(value/TWO_PI) for value in vertex_phases], fontsize=8)
+ellipse_stats_box(cell_ax, ellipse)
 cell_ax.axhline(0, color=".85", lw=0.6)
 cell_ax.axvline(0, color=".85", lw=0.6)
 cell_ax.set_aspect("equal", adjustable="datalim")
@@ -211,6 +209,7 @@ cell_ax.text(
     fontweight="bold",
 )
 cell_ax.legend(
+    handles=ellipse_legend_handles(),
     loc="upper left",
     fontsize=8.5,
     frameon=True,

@@ -30,13 +30,19 @@
       "csv": "/home/nikki/covariance_geometry/SEP_2026/results/supplementary_data/endometrium_feature_weights.csv.gz"
     }
   },
-  "workbook": "/home/nikki/covariance_geometry/SEP_2026/results/supplementary_data/Supplementary_Data_clrcycle_feature_weights.xlsx",
+  "workbooks": {
+    "Circadian": "/home/nikki/covariance_geometry/SEP_2026/results/supplementary_data/Supplementary_Data_1_GSE54650.xlsx",
+    "FUCCI": "/home/nikki/covariance_geometry/SEP_2026/results/supplementary_data/Supplementary_Data_2_GSE121265.xlsx",
+    "Endometrium": "/home/nikki/covariance_geometry/SEP_2026/results/supplementary_data/Supplementary_Data_3_GSE234354_GSE111976.xlsx"
+  },
+  "ellipse_summary_rows": 16,
+  "ellipse_vertex_rows": 64,
   "liver_CT10_sample_ids": [
     "Liv_CT34",
     "Liv_CT58"
   ],
   "liver_CT10_features_plotted": 50,
-  "liver_CT10_selection": "25 highest and 25 lowest mean feature weights across both replicates",
+  "liver_CT10_selection": "One probe per displayed gene, chosen by largest absolute mean weight; 25 highest and 25 lowest mean weights across both replicates",
   "rows_follow_clrcycle_order": true,
   "liver_CT10_max_radius_error": 9.769962616701378e-15,
   "supplementary_figure_renumbering": "CT10 heatmap is Supplementary Figure 1; benchmarks are Supplementary Figure 2"

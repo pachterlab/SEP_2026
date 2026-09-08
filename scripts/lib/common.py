@@ -185,6 +185,89 @@ def phase_from_stage(stage: np.ndarray) -> np.ndarray:
     return np.mod((np.asarray(stage, float) - 1) / 7 * 2 * np.pi, 2 * np.pi)
 
 
+def paper_ellipse(result, metadata, *, period, units, origin=0.0, alignment=None):
+    """Summarize raw coordinates; optionally retain an existing phase calibration."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "vendor/clrcycle"))
+    import clrcycle
+
+    metadata = np.asarray(metadata, float)
+    summary = clrcycle.ellipse_summary(result, n_permutations=1000, seed=SEED)
+    angles = result.coordinates.clrcycle_angle.to_numpy(float)
+    if alignment is None:
+        agreement = clrcycle.circular_agreement(angles, metadata-origin, period=period)
+        rotation, reflected = agreement["rotation"], agreement["reflection"]
+    else:
+        rotation, reflected = alignment
+    aligned = ((-angles if reflected else angles) + rotation) % (2*np.pi)
+    residual = aligned - (metadata-origin)*2*np.pi/period
+    summary.update(n_samples=len(angles), metadata_units=units, metadata_period=period,
+                   metadata_origin=origin, n_permutations=1000, seed=SEED,
+                   circular_agreement_R=float(abs(np.mean(np.exp(1j*residual)))),
+                   alignment_rotation=float(rotation), alignment_reflection=bool(reflected))
+    measured = np.sort(np.unique((metadata-origin) % period + origin))
+    for name in ("major_vertex_1", "major_vertex_2", "minor_vertex_1", "minor_vertex_2"):
+        angle = summary[name+"_angle"]
+        phase = ((-angle if reflected else angle) + rotation) % (2*np.pi)
+        value = phase*period/(2*np.pi)+origin
+        summary[name+"_metadata"] = value
+        summary[name+"_nearest_measured_metadata"] = measured[np.argmin(abs((measured-value+period/2) % period-period/2))]
+    return summary
+
+
+def ellipse_legend_handles():
+    """Consistent keys for the ellipse curve, axes, and vertex markers."""
+    from matplotlib.lines import Line2D
+
+    return [
+        Line2D([], [], color=".3", ls=":", lw=1.4, label="Fitted ellipse"),
+        Line2D([], [], color=".5", lw=.6, label="Major / minor axes"),
+        Line2D([], [], color="black", marker="D", ls="", markerfacecolor="white",
+               markersize=5, markeredgewidth=.7, label="Vertices (axis endpoints)"),
+    ]
+
+
+def ellipse_stats_box(axis, summary, *, fontsize=9):
+    """Show ellipse shape and normalized center displacement inside a panel."""
+    displacement = summary["ellipse_center_distance"] / summary["major_semiaxis"]
+    axis.text(
+        .03, .03,
+        rf"Anisotropy $b/a$ = {summary['axis_ratio']:.2f}" + "\n"
+        + rf"Displacement $d/a$ = {displacement:.2f}",
+        transform=axis.transAxes, ha="left", va="bottom", fontsize=fontsize,
+        bbox=dict(boxstyle="round,pad=0.35", facecolor="white", edgecolor=".8", alpha=.9),
+        zorder=10,
+    )
+
+
+def draw_ellipse(axis, summary, raw_xy, displayed_xy, *, labels=None, colors=None, fontsize=8):
+    """Overlay the raw ellipse using only the panel's existing rotation/reflection."""
+    transform = np.linalg.lstsq(raw_xy, displayed_xy, rcond=None)[0]
+    np.testing.assert_allclose(transform.T @ transform, np.eye(2), atol=1e-10)
+    np.testing.assert_allclose(raw_xy @ transform, displayed_xy, atol=1e-10)
+    center = np.array([summary["ellipse_center_x"], summary["ellipse_center_y"]])
+    names = ("major_vertex_1", "major_vertex_2", "minor_vertex_1", "minor_vertex_2")
+    vertices = np.array([[summary[n+"_x"], summary[n+"_y"]] for n in names])
+    theta = np.linspace(0, 2*np.pi, 361)
+    curve = center + np.outer(np.cos(theta), vertices[0]-center) + np.outer(np.sin(theta), vertices[2]-center)
+    axis.plot(*(curve @ transform).T, color=".3", ls=":", lw=1.4, label="Fitted ellipse", zorder=4)
+    vertices, center = vertices @ transform, center @ transform
+    for pair in (slice(0, 2), slice(2, 4)):
+        axis.plot(*vertices[pair].T, color=".5", lw=.6, zorder=3)
+    significant = np.isfinite(summary.get("anisotropy_pvalue", np.nan)) and summary["anisotropy_pvalue"] < .05
+    shown = np.array([significant, significant, True, True])
+    axis.scatter(*vertices[shown].T, c=np.asarray(colors)[shown] if colors is not None else "white", marker="D",
+                 s=27, edgecolor="black", linewidth=.7, zorder=6)
+    for show, vertex, label in zip(shown, vertices, labels or [f"{summary[n+'_metadata']:.1f}" for n in names]):
+        if not show:
+            continue
+        right, above = vertex[0] >= center[0], vertex[1] >= center[1]
+        axis.annotate(label, vertex, xytext=(5 if right else -5, 7 if above else -7),
+                      textcoords="offset points", ha="left" if right else "right",
+                      va="bottom" if above else "top", fontsize=fontsize, zorder=7,
+                      bbox=dict(facecolor="white", edgecolor="none", alpha=.75, pad=.6))
+    axis.margins(.22)
+
+
 def day_to_stage(day: np.ndarray) -> np.ndarray:
     """Convert cycle-day estimates to the seven histological stages."""
     return np.digitize(np.asarray(day, float), [4, 7, 11, 15, 19, 23], right=True) + 1

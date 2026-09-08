@@ -39,6 +39,7 @@ DIRS = {
 }
 sys.path.insert(0, str(ROOT / "vendor/clrcycle"))
 import clrcycle
+from lib.common import paper_ellipse
 
 SEED, TOP_N, TEST_SIZE, N_SWAPS = 17, 250, 0.20, 4000
 TWO_PI = 2 * np.pi
@@ -326,6 +327,31 @@ def add_oriented(z, p):
     return z
 
 
+def training_ellipse_table(training, orientation, stage_centers):
+    """Describe only the training ellipse displayed in Figure 3 A and C."""
+    model = clrcycle.circular_agreement(training.raw_angle, training.model_cycle_time, period=100)
+    coordinates = training[["raw_cosine", "raw_sine", "raw_angle"]].rename(columns={
+        "raw_cosine": "clrcycle_cosine", "raw_sine": "clrcycle_sine", "raw_angle": "clrcycle_angle"})
+    result = clrcycle.ClrCycleResult(coordinates, pd.DataFrame(), np.nan, np.nan)
+    references = [
+        ("stage", training.histology_stage.map(STAGE_DAY), 28, 1,
+         (orientation["rotation_radians"], orientation["reflected"]), "cycle day calibrated to training histology"),
+        ("model_time", training.model_cycle_time, 100, 0,
+         (model["rotation"], model["reflection"]), "molecular-model time (0-100)"),
+    ]
+    rows = []
+    for reference, metadata, period, origin, alignment, units in references:
+        row = paper_ellipse(result, metadata, period=period, units=units, origin=origin, alignment=alignment)
+        row.update(cohort="rnaseq_train", metadata_reference=reference, alignment_source="RNA-seq training calibration")
+        for name in ("major_vertex_1", "major_vertex_2", "minor_vertex_1", "minor_vertex_2"):
+            phase = apply_orientation(np.array([row[name+"_angle"]]), orientation)
+            stage = int(predict(phase, stage_centers)[0])
+            row[name+"_stage"] = stage
+            row[name+"_stage_label"] = STAGE_NAMES[stage-1]
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
 def score(z, stage_col=None, time_col=None, ctr=None, period=100.0) -> dict:
     """Calculate circular-time and stage-agreement validation metrics."""
     ans = {"n": int(len(z))}
@@ -506,6 +532,8 @@ def run_shared_analysis():
     )
 
     # Stage 6: write the complete numerical audit trail used by Figure 3.
+    training_ellipse_table(train_z, p, ctr).to_csv(
+        DIRS["tables"] / "training_ellipse_geometry.csv", index=False)
     for platform, z in (
         ("rnaseq_train", train_z),
         ("rnaseq_heldout", test_z),
@@ -578,6 +606,7 @@ def run_shared_analysis():
     public = ROOT / "results" / "fig3"
     public.mkdir(parents=True, exist_ok=True)
     exports = {
+        DIRS["tables"] / "training_ellipse_geometry.csv": "training_ellipse_geometry.csv",
         DIRS["discovery_rnaseq"]
         / "ranked_top250_features.csv": "ranked_top250_features.csv",
         DIRS["tables"] / "frozen_gene_order.csv": "frozen_gene_order.csv",
