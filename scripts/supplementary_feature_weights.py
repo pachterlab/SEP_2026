@@ -14,6 +14,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from build_chiral_workbook import write_chiral_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "vendor/clrcycle"))
@@ -294,6 +295,7 @@ def write_workbook(path, geometry, table):
 
 
 def main():
+    chiral_workbook = write_chiral_workbook()
     OUT.mkdir(parents=True, exist_ok=True)
     FIGURES.mkdir(exist_ok=True)
     sources = {
@@ -352,7 +354,10 @@ def main():
             }
             for key, table in tables.items()
         },
-        "workbooks": {key: str(OUT / name) for key, name in workbook_names.items()},
+        "workbooks": {
+            **{key: str(OUT / name) for key, name in workbook_names.items()},
+            "CHIRAL_comparison": str(chiral_workbook),
+        },
         "ellipse_summary_rows": len(ellipse_geometry),
         "ellipse_vertex_rows": len(ellipse_vertices),
         "liver_CT10_sample_ids": ct10_ids,

@@ -33,7 +33,8 @@
   "workbooks": {
     "Circadian": "/home/nikki/covariance_geometry/SEP_2026/results/supplementary_data/Supplementary_Data_1_GSE54650.xlsx",
     "FUCCI": "/home/nikki/covariance_geometry/SEP_2026/results/supplementary_data/Supplementary_Data_2_GSE121265.xlsx",
-    "Endometrium": "/home/nikki/covariance_geometry/SEP_2026/results/supplementary_data/Supplementary_Data_3_GSE234354_GSE111976.xlsx"
+    "Endometrium": "/home/nikki/covariance_geometry/SEP_2026/results/supplementary_data/Supplementary_Data_3_GSE234354_GSE111976.xlsx",
+    "CHIRAL_comparison": "/home/nikki/covariance_geometry/SEP_2026/results/supplementary_data/Supplementary_Data_4_CHIRAL_vs_clrcycle.xlsx"
   },
   "ellipse_summary_rows": 16,
   "ellipse_vertex_rows": 64,

@@ -1,0 +1,121 @@
+{
+  "panel_source": "results/fig1/all_tissues/all_tissue_feature_orders.csv",
+  "coordinate_source": "results/fig1/all_tissues/all_tissue_sample_coordinates.csv",
+  "alignment": "lib.circadian.align; choose reflection maximizing phase resultant, then circular-mean rotation",
+  "R": "abs(mean(exp(1j * (aligned_phase - reference_phase))))",
+  "error": "mean(abs(angle(exp(1j * (aligned_phase - reference_phase))))) * 24 / (2*pi)",
+  "aggregation": "Unweighted arithmetic mean across the 12 tissues",
+  "scope": "Single CHIRAL seed 17 versus saved Figure 1 fits; no repeated-initialization robustness claim",
+  "selection": "Exact Figure 1 probes, selected upstream using collection-time harmonic scores; no reselection or gene-symbol deduplication",
+  "preprocessing": "Same positive expression entries: log2 for CHIRAL, native centered log-ratio transform for clrcycle",
+  "tissues": {
+    "Adrenal": {
+      "input_sha256": "7892f2fbe47ebabe8292d6d146f88bcec21fc199ab2af84578598d29ae5effd7",
+      "phase_sha256": "3298d99a6faf3f586ae6f84022251f99baddce5f3ee93a100e9d30e35ae9a04e",
+      "seed": 17,
+      "software": "CHIRAL 0.1.0 R 3.6.3",
+      "max_coordinate_reconstruction_error": 3.1086244689504383e-15,
+      "chiral_alignment_reflected": false,
+      "clrcycle_alignment_reflected": false
+    },
+    "Aorta": {
+      "input_sha256": "36bf5f7160cfbdeb324fc6917b78ba0f759499366069adbe9c9a579c8fdedd70",
+      "phase_sha256": "469ee2e6f2b13bf4732831a1a5c06459e505a961ad240f59664536ede9030d1b",
+      "seed": 17,
+      "software": "CHIRAL 0.1.0 R 3.6.3",
+      "max_coordinate_reconstruction_error": 3.9968028886505635e-15,
+      "chiral_alignment_reflected": false,
+      "clrcycle_alignment_reflected": true
+    },
+    "Brainstem": {
+      "input_sha256": "5ab4846fdd450e9e13801e5e4e33c9ae1983827fba82ec2492f3283cb1391c20",
+      "phase_sha256": "d0bf7a497acf4a3aa07d4604ac0774e17c4f86d0ead7a301e15f4de8b573e334",
+      "seed": 17,
+      "software": "CHIRAL 0.1.0 R 3.6.3",
+      "max_coordinate_reconstruction_error": 1.9984014443252818e-15,
+      "chiral_alignment_reflected": false,
+      "clrcycle_alignment_reflected": true
+    },
+    "Brown fat": {
+      "input_sha256": "e6d8bcabf73631b68e873002afcb13586aaa0616f266e7cbe4a19971435f6548",
+      "phase_sha256": "77309043743b01fc03a87e50e120263d4b998d1df0117968b6854e4e5e6f9633",
+      "seed": 17,
+      "software": "CHIRAL 0.1.0 R 3.6.3",
+      "max_coordinate_reconstruction_error": 3.1086244689504383e-15,
+      "chiral_alignment_reflected": false,
+      "clrcycle_alignment_reflected": true
+    },
+    "Cerebellum": {
+      "input_sha256": "5ae659f1f2429f3959100efeb3c570ae9e0d063034d27fcc218f9fd5325f607a",
+      "phase_sha256": "4c547ad44c1c91034e58599d89e2c5689ede81144535824adf62b3c8bfe8b01b",
+      "seed": 17,
+      "software": "CHIRAL 0.1.0 R 3.6.3",
+      "max_coordinate_reconstruction_error": 1.1102230246251565e-15,
+      "chiral_alignment_reflected": false,
+      "clrcycle_alignment_reflected": true
+    },
+    "Heart": {
+      "input_sha256": "d539cee62c59cd1a0905fcb73c6871ecbf1e4c65829a37b36ae8120ee9ca6093",
+      "phase_sha256": "377b940b9120da99255bbe8923aa1a8af0d546a1893e98098d0d36bdad318099",
+      "seed": 17,
+      "software": "CHIRAL 0.1.0 R 3.6.3",
+      "max_coordinate_reconstruction_error": 3.552713678800501e-15,
+      "chiral_alignment_reflected": false,
+      "clrcycle_alignment_reflected": true
+    },
+    "Hypothalamus": {
+      "input_sha256": "277a998a8807de64bd1497377983ac3e6bde6774ca18e6f8e4cbd4003212bd10",
+      "phase_sha256": "175cd61032b59a885a3139c261f43190da28a46269bdc8b9e54de349bd4e8d3e",
+      "seed": 17,
+      "software": "CHIRAL 0.1.0 R 3.6.3",
+      "max_coordinate_reconstruction_error": 1.3322676295501878e-15,
+      "chiral_alignment_reflected": true,
+      "clrcycle_alignment_reflected": false
+    },
+    "Kidney": {
+      "input_sha256": "b576b043fa7733310e6f4e19ae840898141d9e11e895a86338c01b9f6ef0a506",
+      "phase_sha256": "838c2b1c9df98966f887dfc2b3c5d45e3c610bd827d596d9148c92537745cdcc",
+      "seed": 17,
+      "software": "CHIRAL 0.1.0 R 3.6.3",
+      "max_coordinate_reconstruction_error": 2.6645352591003757e-15,
+      "chiral_alignment_reflected": false,
+      "clrcycle_alignment_reflected": true
+    },
+    "Liver": {
+      "input_sha256": "eb4b3ab5c1ab91841c175aca562a71d8a297de05e241912913e63762f2896a3c",
+      "phase_sha256": "b53b1f18f26d1550b921ee7a80ca402745f04113f66dfbc3a093516ad1c65c31",
+      "seed": 17,
+      "software": "CHIRAL 0.1.0 R 3.6.3",
+      "max_coordinate_reconstruction_error": 4.440892098500626e-15,
+      "chiral_alignment_reflected": false,
+      "clrcycle_alignment_reflected": true
+    },
+    "Lung": {
+      "input_sha256": "499d2953fa7d4006e9aeaa9e6c41d58225ad8a66ab2a4d644b8cabeae7914bf7",
+      "phase_sha256": "2236fa3af560222664487240ccdc08a92fae87fa58dc752218e00d265dccfaa7",
+      "seed": 17,
+      "software": "CHIRAL 0.1.0 R 3.6.3",
+      "max_coordinate_reconstruction_error": 3.1086244689504383e-15,
+      "chiral_alignment_reflected": false,
+      "clrcycle_alignment_reflected": true
+    },
+    "Muscle": {
+      "input_sha256": "8ec626e515a4f3dc2949bb52b4ccb5769473859c60f6040567441c02a9bb9832",
+      "phase_sha256": "da938082c220aa5d294110bb9ad7c160143d66a87b30d8cfe68eb511db2dee23",
+      "seed": 17,
+      "software": "CHIRAL 0.1.0 R 3.6.3",
+      "max_coordinate_reconstruction_error": 1.7763568394002505e-15,
+      "chiral_alignment_reflected": false,
+      "clrcycle_alignment_reflected": true
+    },
+    "White fat": {
+      "input_sha256": "0bc2084b1a0e9bf289c7c1c0c659fe30fcd1926027c8c4381cf376c4f7c5a9fc",
+      "phase_sha256": "984345aa55363b6fb4fd7a6f99b0de82ea3a9222dcb713a58bf3c91590b10c93",
+      "seed": 17,
+      "software": "CHIRAL 0.1.0 R 3.6.3",
+      "max_coordinate_reconstruction_error": 3.552713678800501e-15,
+      "chiral_alignment_reflected": false,
+      "clrcycle_alignment_reflected": true
+    }
+  }
+}

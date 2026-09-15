@@ -1,13 +1,16 @@
 {
-  "python": "3.9.6",
-  "platform": "macOS-26.3.1-arm64-arm-64bit",
+  "python": "3.11.16",
+  "platform": "Linux-5.4.0-216-generic-x86_64-with-glibc2.31",
   "clrcycle": "0.1.0",
-  "numpy": "2.0.2",
+  "numpy": "2.4.6",
   "pandas": "2.3.3",
-  "matplotlib": "3.9.4",
-  "scipy": "1.13.1",
-  "scikit-learn": "1.6.1",
-  "umap-learn": "0.5.11",
-  "r": "4.5.2",
-  "CHIRAL": "0.1.0"
+  "matplotlib": "3.11.1",
+  "scipy": "1.17.1",
+  "scikit-learn": "1.9.0",
+  "umap-learn": "0.5.9.post2",
+  "chiral_fit_software": [
+    "CHIRAL 0.1.0 R 3.6.3"
+  ],
+  "CHIRAL": "0.1.0",
+  "r": "3.6.3"
 }
