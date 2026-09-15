@@ -15,6 +15,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patches import FancyArrowPatch
 
 
@@ -22,12 +23,14 @@ ROOT = Path(__file__).resolve().parents[1]
 FIGURE_DIR = ROOT / "figures"
 METHODS_PANEL_DIR = FIGURE_DIR / "methods figs"
 
-BLUE = "#1f77b4"
-ORANGE = "#ff7f0e"
-GREEN = "#2ca02c"
+INK = "#303030"
 GRAY = "0.42"
 LIGHT_GRAY = "0.88"
 GENES = np.array(["Gene A", "Gene B", "Gene C"])
+GENE_COLORS = np.array(["#c76b16", "#8b59a5", "#008577"])
+GRAY_CMAP = LinearSegmentedColormap.from_list(
+    "neutral_gray", ["#f3f3f3", "#b0b0b0", "#303030"]
+)
 
 
 def clr(counts: np.ndarray) -> np.ndarray:
@@ -59,28 +62,32 @@ def composition_to_xy(composition: np.ndarray) -> np.ndarray:
 
 def workflow_values() -> dict[str, np.ndarray]:
     """Compute every numeric quantity displayed in the schematic."""
-    counts = np.array(
-        [
-            [10.0, 20.0, 30.0],
-            [100.0, 200.0, 300.0],
-            [10.0, 20.0, 300.0],
-        ]
-    )
+    # Ten phases on a rotated ellipse. The two major-axis endpoints touch
+    # the unit gene circle; the shorter radii illustrate variable amplitude.
+    # Three-gene CLR profiles remain entirely first harmonic.
+    display_order = np.array([0, 2, 1])
+    _, cosine, sine = fourier_weights(3)
+    phases = 2 * np.pi * np.arange(10) / 10
+    rotation = np.pi / 4
+    rotation_matrix = np.array([[np.cos(rotation), -np.sin(rotation)],
+                                [np.sin(rotation), np.cos(rotation)]])
+    scores = np.column_stack((np.cos(phases), 0.58 * np.sin(phases))) @ rotation_matrix.T
+    coordinates = np.empty((len(scores), 3))
+    coordinates[:, display_order] = np.outer(scores[:, 0], cosine) + np.outer(scores[:, 1], sine)
+    # Positive expression, with geometric mean 100 in every cell. Keep full
+    # precision for all computations; only heatmap annotations are rounded.
+    counts = 100 * np.exp(coordinates)
     compositions = counts / counts.sum(axis=1, keepdims=True)
     coordinates = clr(counts)
     covariance = np.cov(coordinates, rowvar=False)
-
-    # All three-gene CLR orders tie; retain the authored non-trivial example.
-    display_order = np.array([0, 2, 1])
     scored = [
         (np.asarray(order), objective(covariance, np.asarray(order)))
         for order in permutations(range(3))
     ]
-    _, cosine, sine = fourier_weights(3)
     centered = coordinates - coordinates.mean(axis=0, keepdims=True)
     ordered = centered[:, display_order]
     projected = np.column_stack((ordered @ cosine, ordered @ sine))
-    projected *= 0.78 / np.hypot(projected[:, 0], projected[:, 1]).max()
+    projected /= np.linalg.norm(projected, axis=1).max()
 
     return {
         "counts": counts,
@@ -114,13 +121,19 @@ def panel_title(
     )
 
 
-def draw_composition(axis: plt.Axes, values: dict[str, np.ndarray]) -> None:
+def draw_composition(
+    axis: plt.Axes, values: dict[str, np.ndarray], *, show_title: bool = True
+) -> None:
     """Draw expression as compositions and introduce CLR coordinates."""
-    panel_title(axis, 1, "Gene expression in CLR space")
+    if show_title:
+        panel_title(axis, 1, "Gene expression in CLR space", horizontal_position=0.54)
     top = np.array([0.5, np.sqrt(3) / 2])
     left, right = np.array([0.0, 0.0]), np.array([1.0, 0.0])
     triangle = np.vstack((left, right, top, left))
-    axis.plot(triangle[:, 0], triangle[:, 1], color=BLUE, lw=3)
+    axis.plot(triangle[:, 0], triangle[:, 1], color=INK, lw=3)
+    vertices = np.array([top, left, right])
+    axis.scatter(vertices[:, 0], vertices[:, 1], c=GENE_COLORS,
+                 s=110, zorder=6, edgecolors="white", linewidths=1)
 
     for fraction in (0.2, 0.4, 0.6, 0.8):
         pairs = (
@@ -133,28 +146,17 @@ def draw_composition(axis: plt.Axes, values: dict[str, np.ndarray]) -> None:
             axis.plot(line[:, 0], line[:, 1], color=GRAY, lw=1, ls="--", alpha=0.48)
 
     points = np.array([composition_to_xy(row) for row in values["compositions"]])
-    styles = ((BLUE, "o", 120), (ORANGE, "x", 155), (GREEN, "^", 135))
-    cell_labels = tuple(
-        f"Cell {index}:  ({', '.join(map(str, row.astype(int)))})"
-        for index, row in enumerate(values["counts"], start=1)
-    )
-    for point, (color, marker, size), label in zip(
-        points, styles, cell_labels
-    ):
-        axis.scatter(
-            *point,
-            color=color,
-            marker=marker,
-            s=size,
-            linewidths=3 if marker == "x" else None,
-            label=label,
-            zorder=5,
-        )
+    for index, point in enumerate(points):
+        color = INK
+        axis.scatter(*point, color=color, marker="o", s=75, zorder=5)
+        axis.annotate(str(index + 1), point, xytext=(5, 5),
+                      textcoords="offset points", fontsize=12, color=color)
 
     axis.text(
         0.5,
         0.94,
         "Gene A",
+        color=GENE_COLORS[0],
         ha="center",
         va="bottom",
         fontsize=19,
@@ -164,6 +166,7 @@ def draw_composition(axis: plt.Axes, values: dict[str, np.ndarray]) -> None:
         -0.03,
         -0.055,
         "Gene B",
+        color=GENE_COLORS[1],
         ha="right",
         va="top",
         fontsize=19,
@@ -173,55 +176,70 @@ def draw_composition(axis: plt.Axes, values: dict[str, np.ndarray]) -> None:
         1.03,
         -0.055,
         "Gene C",
+        color=GENE_COLORS[2],
         ha="left",
         va="top",
         fontsize=19,
         fontweight="bold",
     )
-    axis.annotate(
-        "same relative\nexpression",
-        xy=points[0],
-        xytext=(0.25, 0.50),
-        ha="right",
-        va="center",
-        fontsize=15,
-        arrowprops=dict(arrowstyle="->", lw=1.5),
-    )
-    axis.legend(
-        frameon=False,
-        fontsize=16,
-        loc="center left",
-        bbox_to_anchor=(0.51, 0.80),
-    )
-
     axis.text(
         0.73,
-        0.50,
+        0.62,
         r"$z_{ig}=\log\frac{x_{ig}}{g(\mathbf{x}_i)}$",
         transform=axis.transAxes,
         ha="center",
         va="center",
-        fontsize=27,
+        fontsize=23,
     )
     axis.text(
         0.73,
-        0.28,
+        0.40,
         r"$g(\mathbf{x}_i)=\left(\prod_g\, x_{ig}\right)^{1/G}$",
         transform=axis.transAxes,
         ha="center",
         va="center",
-        fontsize=24,
+        fontsize=20,
     )
     axis.set(xlim=(-0.18, 2.05), ylim=(-0.18, 1.02), aspect="equal")
     axis.axis("off")
 
 
+def draw_expression_heatmap(axis: plt.Axes, values: dict[str, np.ndarray]) -> None:
+    """Show normalized expression fractions with the same cell IDs used in panels 1 and 5."""
+    # Display per-cell fractions directly, without a logarithm.
+    expression_fractions = values["compositions"]
+    limit = expression_fractions.max()
+    image = axis.imshow(expression_fractions, cmap=GRAY_CMAP, vmin=0, vmax=limit, aspect="auto")
+    colorbar_axis = axis.inset_axes([1.05, 0.0, 0.045, 1.0])
+    colorbar = axis.figure.colorbar(image, cax=colorbar_axis)
+    colorbar.set_label("Relative expression", fontsize=12)
+    colorbar.ax.tick_params(labelsize=11)
+    for row, expression in enumerate(expression_fractions):
+        for column, value in enumerate(expression):
+            color = "white" if value > 0.65 * limit else "black"
+            axis.text(column, row, f"{value:.2f}", ha="center", va="center",
+                      fontsize=12, color=color)
+    axis.set_xticks(range(3), GENES, fontsize=13)
+    axis.xaxis.tick_top()
+    for tick, color in zip(axis.get_xticklabels(), GENE_COLORS):
+        tick.set_color(color)
+        tick.set_fontweight("bold")
+    axis.set_yticks(range(len(expression_fractions)),
+                   [f"Cell {i + 1}" for i in range(len(expression_fractions))], fontsize=12)
+    for tick in axis.get_yticklabels():
+        tick.set_color(INK)
+    axis.tick_params(length=0)
+    for spine in axis.spines.values():
+        spine.set_visible(False)
+
+
+
 def draw_covariance(axis: plt.Axes, covariance: np.ndarray, figure: plt.Figure) -> None:
     """Draw the CLR covariance matrix used by the ordering objective."""
     panel_title(axis, 2, "Gene covariance", horizontal_position=0.38)
-    matrix_axis = axis.inset_axes([0.02, 0.07, 0.72, 0.79])
+    matrix_axis = axis.inset_axes([0.02, 0.07, 0.80, 0.79])
     limit = np.abs(covariance).max()
-    image = matrix_axis.imshow(covariance, cmap="coolwarm", vmin=-limit, vmax=limit)
+    image = matrix_axis.imshow(covariance, cmap=GRAY_CMAP, vmin=-limit, vmax=limit)
     for row in range(3):
         for column in range(3):
             label = (
@@ -229,17 +247,21 @@ def draw_covariance(axis: plt.Axes, covariance: np.ndarray, figure: plt.Figure) 
                 if row == column
                 else f"Cov({'ABC'[row]},{'ABC'[column]})"
             )
-            color = "white" if abs(covariance[row, column]) > 0.55 * limit else "black"
+            color = "white" if covariance[row, column] > 0.1 * limit else "black"
             matrix_axis.text(
-                column, row, label, ha="center", va="center", fontsize=14, color=color
+                column, row, label, ha="center", va="center", fontsize=11, color=color
             )
     matrix_axis.set_xticks(range(3), list("ABC"))
     matrix_axis.set_yticks(range(3), list("ABC"))
     matrix_axis.tick_params(labelsize=17)
+    for ticks in (matrix_axis.get_xticklabels(), matrix_axis.get_yticklabels()):
+        for tick, color in zip(ticks, GENE_COLORS):
+            tick.set_color(color)
+            tick.set_fontweight("bold")
     for spine in matrix_axis.spines.values():
         spine.set_visible(False)
     axis.text(
-        0.38,
+        0.42,
         0.90,
         r"$\Sigma_{\mathrm{genes}}$ in CLR space",
         transform=axis.transAxes,
@@ -247,7 +269,7 @@ def draw_covariance(axis: plt.Axes, covariance: np.ndarray, figure: plt.Figure) 
         fontsize=20,
         fontweight="bold",
     )
-    colorbar_axis = axis.inset_axes([0.63, 0.14, 0.038, 0.66])
+    colorbar_axis = axis.inset_axes([0.86, 0.19, 0.038, 0.55])
     colorbar = figure.colorbar(image, cax=colorbar_axis)
     colorbar.set_label("CLR covariance", fontsize=17)
     colorbar.ax.tick_params(labelsize=15)
@@ -307,9 +329,9 @@ def draw_optimize(axis: plt.Axes) -> None:
         transform=axis.transAxes,
         ha="center",
         fontsize=28,
-        color=BLUE,
+        color=INK,
         fontweight="bold",
-        bbox=dict(boxstyle="round,pad=.22", fc="white", ec=BLUE, lw=2),
+        bbox=dict(boxstyle="round,pad=.22", fc="white", ec=INK, lw=2),
     )
     axis.text(
         0.5,
@@ -328,8 +350,8 @@ def draw_gene_circle(
     """Draw a learned circular feature ordering."""
     theta, _, _ = fourier_weights(3)
     grid = np.linspace(0, 2 * np.pi, 500)
-    axis.plot(np.cos(grid), np.sin(grid), color=BLUE, lw=3)
-    axis.axhline(0, color=LIGHT_GRAY, lw=1)
+    axis.plot(np.cos(grid), np.sin(grid), color=INK, lw=3)
+    axis.plot([-1.30, 1.40], [0, 0], color=LIGHT_GRAY, lw=1)
     axis.axvline(0, color=LIGHT_GRAY, lw=1)
     axis.annotate(
         "",
@@ -345,7 +367,7 @@ def draw_gene_circle(
     )
 
     gene_x, gene_y = np.cos(theta), np.sin(theta)
-    axis.scatter(gene_x, gene_y, color=BLUE, s=100, zorder=5)
+    axis.scatter(gene_x, gene_y, c=GENE_COLORS[order], s=120, zorder=8)
     positions = (
         (1.07, 0.08, "left", "bottom"),
         (-0.58, 0.96, "right", "bottom"),
@@ -353,83 +375,88 @@ def draw_gene_circle(
     )
     for position, gene_index in enumerate(order):
         x, y, horizontal, vertical = positions[position]
-        axis.text(x, y, GENES[gene_index], fontsize=20, ha=horizontal, va=vertical)
+        axis.text(x, y, GENES[gene_index], fontsize=20, ha=horizontal, va=vertical,
+                  color=GENE_COLORS[gene_index])
 
     if projected is None:
         angle = theta[1]
-        axis.plot([0, gene_x[1]], [0, gene_y[1]], color=BLUE, lw=2.8)
+        gene_color = GENE_COLORS[order[1]]
+        axis.plot([0, gene_x[1]], [0, gene_y[1]], color=gene_color, lw=2.8)
         axis.scatter(
             gene_x[1],
             gene_y[1],
             s=210,
             facecolor="white",
-            edgecolor=BLUE,
+            edgecolor=gene_color,
             lw=2.8,
-            zorder=7,
+            zorder=9,
         )
         arc = np.linspace(0, angle, 120)
-        axis.plot(0.25 * np.cos(arc), 0.25 * np.sin(arc), color=BLUE, lw=2)
+        axis.plot(0.25 * np.cos(arc), 0.25 * np.sin(arc), color=gene_color, lw=2)
         axis.text(
             0.36 * np.cos(angle / 2),
             0.36 * np.sin(angle / 2),
             r"$\theta_C$",
             fontsize=20,
-            color=BLUE,
+            color=gene_color,
             ha="center",
             va="center",
         )
         axis.text(1.14, -0.14, r"$\cos\theta$", fontsize=18)
         axis.text(0.05, 1.16, r"$\sin\theta$", fontsize=18)
     else:
-        styles = ((BLUE, "o", 145), (ORANGE, "x", 145), (GREEN, "^", 135))
-        for point, (color, marker, size), label in zip(
-            projected, styles, ("Cell 1", "Cell 2", "Cell 3")
-        ):
-            axis.plot([0, point[0]], [0, point[1]], color=color, lw=1.5)
-            axis.scatter(
-                *point,
-                color=color,
-                marker=marker,
-                s=size,
-                linewidths=2.5 if marker == "x" else None,
-                label=label,
-                zorder=7,
-            )
-        axis.legend(frameon=False, fontsize=15, loc="upper right")
-        axis.annotate(
-            "Cells 1 & 2\noverlap",
-            xy=projected[0],
-            xytext=(projected[0, 0] - 0.48, projected[0, 1] - 0.17),
-            fontsize=14,
-            ha="center",
-            va="top",
-            arrowprops=dict(arrowstyle="->", lw=1, color=GRAY),
-        )
+        # Fit all ten cells. Uniform ellipse phases make this moment fit exact.
+        # For uniformly sampled phases, 2 * covariance gives squared axes.
+        reference = projected
+        center = reference.mean(axis=0)
+        eigenvalues, eigenvectors = np.linalg.eigh(np.cov(reference, rowvar=False, bias=True))
+        ellipse = center + (np.column_stack((np.cos(grid), np.sin(grid)))
+                            * np.sqrt(2 * eigenvalues)) @ eigenvectors.T
+        axis.plot(ellipse[:, 0], ellipse[:, 1], color=GRAY, lw=2,
+                  ls="--", label="Ellipse fit", zorder=4)
+        ellipse_precision = np.linalg.inv(np.cov(reference, rowvar=False, bias=True))
+        for index, point in enumerate(projected):
+            color = INK
+            axis.scatter(*point, color=color, marker="o",
+                         s=100, zorder=7, label="Cells" if index == 0 else None)
+            # Place labels inside the fitted ellipse along its inward normal.
+            # This clears both the ellipse and the enclosing reference circle.
+            offset = -ellipse_precision @ (point - center)
+            offset /= np.linalg.norm(offset)
+            axis.annotate(str(index + 1), point, xytext=tuple(17 * offset),
+                          textcoords="offset points", fontsize=12, color=color,
+                          ha="center", va="center")
+        handles, labels = axis.get_legend_handles_labels()
+        axis.legend(handles[::-1], labels[::-1], frameon=False, fontsize=11,
+                    loc="center right", bbox_to_anchor=(-1.16, 0),
+                    bbox_transform=axis.transData, borderaxespad=0, labelspacing=0.5)
         point = projected[2]
+        axis.plot([0, point[0]], [0, point[1]], color=INK, lw=1.5)
         phi = np.arctan2(point[1], point[0])
         arc = np.linspace(0, phi, 100)
-        axis.plot(0.22 * np.cos(arc), 0.22 * np.sin(arc), color=GREEN, lw=1.8)
+        axis.plot(0.22 * np.cos(arc), 0.22 * np.sin(arc), color=INK, lw=1.8)
         axis.text(
             0.31 * np.cos(phi / 2),
             0.31 * np.sin(phi / 2),
-            r"$\phi_i$",
-            fontsize=17,
-            color=GREEN,
+            r"$\phi_3$",
+            fontsize=20,
+            color=INK,
             ha="center",
             va="center",
         )
         axis.text(
-            0.57 * point[0],
+            0.57 * point[0] - 0.13,
             0.57 * point[1] + 0.04,
-            r"$r_i$",
-            fontsize=17,
-            color=GREEN,
+            r"$r_3$",
+            fontsize=20,
+            color=INK,
             ha="center",
         )
-        axis.text(1.14, -0.14, r"$u_i$", fontsize=17)
-        axis.text(0.05, 1.16, r"$v_i$", fontsize=17)
+        axis.text(1.14, -0.14, r"$u_i$", fontsize=20)
+        axis.text(0.05, 1.16, r"$v_i$", fontsize=20)
 
-    axis.set(xlim=(-1.30, 1.40), ylim=(-1.22, 1.28), aspect="equal")
+    axis.set(xlim=(-1.68, 1.67) if projected is not None else (-1.30, 1.40),
+             ylim=(-1.22, 1.28), aspect="equal")
     axis.axis("off")
 
 
@@ -444,6 +471,7 @@ def draw_fourier(axis: plt.Axes, order: np.ndarray) -> None:
         transform=axis.transAxes,
         ha="center",
         fontsize=20,
+        color=GENE_COLORS[order[1]],
     )
 
 
@@ -458,13 +486,13 @@ def draw_projection(axis: plt.Axes, order: np.ndarray, projected: np.ndarray) ->
     draw_gene_circle(axis, order, projected=projected)
     axis.text(
         0.5,
-        -0.08,
+        -0.065,
         r"$u_i=\sum_g Z_{i,\widehat{\pi}(g)}c_g$"
         "   "
         r"$v_i=\sum_g Z_{i,\widehat{\pi}(g)}s_g$",
         transform=axis.transAxes,
         ha="center",
-        fontsize=18,
+        fontsize=24,
     )
 
 
@@ -588,8 +616,8 @@ def render_figure() -> None:
     axes = [
         figure.add_subplot(grid[row, start:stop])
         for row, start, stop in (
-            (0, 1, 6),
-            (0, 6, 11),
+            (0, 4, 9),
+            (0, 9, 12),
             (1, 8, 12),
             (1, 4, 8),
             (1, 0, 4),
@@ -601,13 +629,39 @@ def render_figure() -> None:
             [position.x0 + horizontal_shift, position.y0, position.width, position.height]
         )
 
-    draw_composition(axes[0], values)
+    # Center the heatmap and its colorbar within the top-left grid cell.
+    expression_panel = figure.add_subplot(grid[0, 0:4])
+    expression_panel.axis("off")
+    for axis in (expression_panel, axes[0]):
+        position = axis.get_position()
+        axis.set_position([position.x0 - 0.03, position.y0,
+                           position.width, position.height])
+    heatmap_axis = expression_panel.inset_axes([0.16, 0.05, 0.57, 0.71])
+    draw_expression_heatmap(heatmap_axis, values)
+    draw_composition(axes[0], values, show_title=False)
     draw_covariance(axes[1], values["covariance"], figure)
     draw_optimize(axes[2])
     draw_fourier(axes[3], values["display_order"])
     draw_projection(axes[4], values["display_order"], values["projected"])
 
-    block_arrow(figure, axes[0], axes[1])
+    # Align the number 1 with the number 5 on the centered first title line.
+    figure.canvas.draw()
+    projection_title = axes[4].texts[0]
+    renderer = figure.canvas.get_renderer()
+    first_line = projection_title.get_text().split("\n")[0]
+    first_line_width, _, _ = renderer.get_text_width_height_descent(
+        first_line, projection_title.get_fontproperties(), ismath=False
+    )
+    title_center_x = projection_title.get_transform().transform(
+        projection_title.get_position()
+    )[0]
+    title_x = figure.transFigure.inverted().transform(
+        (title_center_x - first_line_width / 2, 0)
+    )[0]
+    figure.text(title_x, 0.885, "1. Gene expression in CLR space",
+                ha="left", va="bottom", fontsize=24, fontweight="bold")
+
+    block_arrow(figure, axes[0], axes[1], horizontal_offset=-0.030)
     block_arrow(figure, axes[1], axes[2], downward=True)
     block_arrow(figure, axes[2], axes[3], horizontal_offset=0.018)
     block_arrow(figure, axes[3], axes[4])

@@ -67,9 +67,10 @@ def render_figures() -> None:
             "pdf.fonttype": 42,
         }
     )
-    fig = plt.figure(figsize=(20, 17.5), constrained_layout=True)
-    outer = fig.add_gridspec(3, 1, height_ratios=(1.05, 0.46, 0.78), hspace=0.40)
-    top = outer[0].subgridspec(1, 5, width_ratios=(0.10, 1, 1, 1, 0.10), wspace=0.06)
+    fig = plt.figure(figsize=(22, 14), constrained_layout=True)
+    fig.get_layout_engine().set(h_pad=0.16, w_pad=0.08)
+    outer = fig.add_gridspec(2, 1, height_ratios=(1.05, 0.90), hspace=0.22)
+    top = outer[0].subgridspec(1, 5, width_ratios=(0.10, 1, 1, 1, 0.18), wspace=0.06)
     hist_ax = fig.add_subplot(top[0, 1])
     gene_ax = fig.add_subplot(top[0, 2])
     time_ax = fig.add_subplot(top[0, 3])
@@ -116,7 +117,7 @@ def render_figures() -> None:
         ax.set(xlabel="first-Fourier cosine", ylabel="first-Fourier sine", title=title)
         ax.text(
             -0.10,
-            1.08,
+            1.34,
             letter,
             transform=ax.transAxes,
             fontsize=PANEL_SIZE,
@@ -132,11 +133,13 @@ def render_figures() -> None:
             edgecolor=".8",
             handlelength=2.0,
         )
+    # Each R compares sample phases with its panel-specific metadata reference.
+    # Use the same post-hoc alignment as the molecular-time ellipse calibration.
     _training_metrics = (
         rf"$\boldsymbol{{\rho}}_{{\mathbf{{clrcycle}}}}$={summary['training_rho']:.3f}, "
-        f"R={summary['orientation']['training_stage_R']:.3f}"
+        rf"$R_{{\mathrm{{histology}}}}$={summary['orientation']['training_stage_R']:.3f}"
     )
-    hist_ax.set_title("Histological stage", y=1.12, pad=0)
+    hist_ax.set_title("Histological stage", y=1.20, pad=4)
     hist_ax.text(
         0.5,
         1.04,
@@ -147,11 +150,18 @@ def render_figures() -> None:
         fontsize=METRIC_SIZE,
         fontweight="bold",
     )
-    time_ax.set_title("Authors' molecular-model time", y=1.12, pad=0)
+    molecular_agreement = endometrium.clrcycle.circular_agreement(
+        train.raw_angle.to_numpy(), train.model_cycle_time.to_numpy(), period=100
+    )
+    _molecular_metrics = (
+        rf"$\boldsymbol{{\rho}}_{{\mathbf{{clrcycle}}}}$={summary['training_rho']:.3f}, "
+        rf"$R_{{\mathrm{{molecular}}}}$={molecular_agreement['R']:.3f}"
+    )
+    time_ax.set_title("Authors' molecular-model time", y=1.20, pad=4)
     time_ax.text(
         0.5,
         1.04,
-        _training_metrics,
+        _molecular_metrics,
         transform=time_ax.transAxes,
         ha="center",
         va="bottom",
@@ -166,7 +176,7 @@ def render_figures() -> None:
     gene_ax.add_patch(plt.Circle((0, 0), 1, fill=False, color=".6", lw=0.8))
     gene_ax.set_aspect("equal")
     gene_ax.axis("off")
-    gene_ax.set_title("Learned gene circle", y=1.10, pad=0)
+    gene_ax.set_title("Learned gene circle", y=1.20, pad=4)
     highlighted = genes.highlighted_top20_training_variance.astype(bool).to_numpy()
     _gene_labels = list(zip(genes.loc[highlighted, "gene"], angle[highlighted]))
     # Place labels in collision-free columns and connect them to their circle
@@ -191,7 +201,7 @@ def render_figures() -> None:
                 _y,
                 gene,
                 fontsize=GENE_SIZE,
-                fontweight="bold" if gene in {"MMP3", "GP2", "COMP"} else "normal",
+                fontweight="normal",
                 ha="left" if _side > 0 else "right",
                 va="center",
                 clip_on=False,
@@ -199,81 +209,21 @@ def render_figures() -> None:
     gene_ax.set(xlim=(-1.78, 1.78), ylim=(-1.48, 1.58))
     gene_ax.text(
         -0.12,
-        1.08,
+        1.34,
         "B",
         transform=gene_ax.transAxes,
         fontsize=PANEL_SIZE,
         fontweight="bold",
     )
-    counts = pd.read_csv(clean / "training_selected_counts.csv.gz", index_col=0)
-    clr_values = endometrium.clrcycle.clr_transform(counts.to_numpy(float))
-    clr_values -= clr_values.mean(0, keepdims=True)
-    model = (
-        train.set_index("sample_id")
-        .loc[counts.index, "model_cycle_time"]
-        .to_numpy(float)
-    )
-    phase = 2 * np.pi * model / 100
-    design = np.c_[np.ones(len(phase)), np.cos(phase), np.sin(phase)]
-    grid = np.linspace(0, 100, 400)
-    gp = 2 * np.pi * grid / 100
-    gd = np.c_[np.ones(len(grid)), np.cos(gp), np.sin(gp)]
-    middle = outer[1].subgridspec(1, 5, width_ratios=(0.55, 1, 1, 1, 0.55), wspace=0.10)
-    fit_axes = []
-    for k, gene in enumerate(("MMP3", "GP2", "COMP")):
-        ax = fig.add_subplot(middle[0, k + 1], sharey=fit_axes[0] if fit_axes else None)
-        j = list(counts.columns).index(gene)
-        y = clr_values[:, j]
-        coef = np.linalg.lstsq(design, y, rcond=None)[0]
-        peak = np.mod(np.arctan2(coef[2], coef[1]), 2 * np.pi) * 100 / (2 * np.pi)
-        ax.scatter(
-            model,
-            y,
-            c=model,
-            cmap=time_cmap,
-            vmin=0,
-            vmax=100,
-            s=22,
-            alpha=0.52,
-            linewidths=0,
-            rasterized=True,
-        )
-        ax.plot(grid, gd @ coef, color="black", lw=1.3, label="Fit")
-        ax.axvline(peak, color=".5", ls="--", lw=0.9, label="Peak")
-        ax.set(title=gene, xlabel="Molecular-model time")
-        ax.set_ylabel("Centered CLR expression" if k == 0 else "")
-        ax.tick_params(axis="y", labelleft=k == 0)
-        ax.legend(
-            loc="upper right",
-            fontsize=14,
-            frameon=True,
-            framealpha=0.9,
-            facecolor="white",
-            edgecolor=".75",
-            handlelength=1.7,
-            borderpad=0.4,
-            labelspacing=0.3,
-        )
-        ax.text(
-            -0.08,
-            1.08,
-            chr(ord("D") + k),
-            transform=ax.transAxes,
-            fontsize=PANEL_SIZE,
-            fontweight="bold",
-        )
-        fit_axes.append(ax)
-    time_cax = fit_axes[-1].inset_axes([1.18, 0.40, 0.72, 0.10])
-    time_bar = fig.colorbar(time_sc, cax=time_cax, orientation="horizontal")
+    time_bar = fig.colorbar(time_sc, ax=time_ax, orientation="vertical",
+                            fraction=0.04, pad=0.04, shrink=0.65)
     time_bar.set_ticks([0, 25, 50, 75, 100])
-    time_bar.ax.tick_params(labelsize=BASE_SIZE, pad=2)
-    time_cax.set_title(
-        "Molecular-model time (C–F)", fontsize=14, fontweight="normal", pad=8
-    )
-    bottom = outer[2].subgridspec(
+    time_bar.ax.tick_params(labelsize=14, pad=2)
+    time_bar.set_label("Molecular-model time (C)", fontsize=14, labelpad=8)
+    bottom = outer[1].subgridspec(
         2,
         7,
-        height_ratios=(0.16, 1),
+        height_ratios=(0.06, 1),
         width_ratios=(0.25, 1, 0.25, 1, 0.25, 1, 0.25),
         wspace=0.05,
         hspace=0.0,
@@ -301,7 +251,7 @@ def render_figures() -> None:
         tuple(0.82 + 0.18 * x for x in matplotlib.colors.to_rgb(color))
         for color in endometrium.STAGE_COLORS
     ]
-    for letter, ax, (frame, color, title, metric) in zip("GHI", axes, datasets):
+    for letter, ax, (frame, color, title, metric) in zip("DEF", axes, datasets):
         angles = bounds.boundary_radians.to_numpy()
         stages = bounds.stage_before.to_numpy(int)
         for start, end, st in zip(np.roll(angles, 1), angles, stages):
@@ -330,7 +280,7 @@ def render_figures() -> None:
             lw=0.5,
         )
         row = metrics.loc[metric]
-        ax.set_title(title, y=1.12, pad=0)
+        ax.set_title(title, y=1.20, pad=4)
         _benchmark_metrics = (
             f"n={len(frame)}, R={row.circular_phase_agreement_R:.2f}, "
             f"exact={100*row.stage_exact:.0f}%, "
@@ -348,7 +298,7 @@ def render_figures() -> None:
         )
         ax.axhline(0, c=".86", lw=0.7)
         ax.axvline(0, c=".86", lw=0.7)
-        ax.set_aspect("equal", adjustable="datalim")
+        ax.set_aspect("equal", adjustable="box")
         ax.set_xlim(-limit, limit)
         ax.set_ylim(-limit, limit)
         ax.set_xlabel("Frozen first-Fourier cosine")
@@ -383,7 +333,7 @@ def render_figures() -> None:
         )
         ax.text(
             -0.20,
-            1.16,
+            1.34,
             letter,
             transform=ax.transAxes,
             fontsize=PANEL_SIZE,
@@ -415,7 +365,7 @@ def render_figures() -> None:
         frameon=False,
         fontsize=16,
         title_fontsize=18,
-        title="\nUnified histological-stage colors shared by A, B, and G–I",
+        title="\nUnified histological-stage colors shared by A, B, and D–F",
     )
     fig.suptitle(
         "Menstrual cycle projection, learned feature geometry (GSE234354), "
