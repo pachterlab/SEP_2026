@@ -16,6 +16,9 @@ This repository contains the data-processing, analysis, benchmarking, and figure
 | Supplementary Figure 2 | Circular-ordering and harmonic-distortion benchmarks | `scripts/supplementary_figure2_benchmarks.py` |
 
 Figures are written to `figures/` as PDF, SVG, and 300-dpi PNG files. Numerical outputs are written to the corresponding directory under `results/`.
+
+`scripts/supplementary_chiral_comparison.py` is a standalone benchmark (not part of `make figures`/`make all`): it fits the CHIRAL algorithm (Naef lab) on the identical tissue-specific gene panels Figure 1 already selected, and compares it against clrcycle's already-validated Figure 1 results. It requires the CHIRAL R package in addition to the Conda environment; see `scripts/README.md` for the install command. Output: `results/chiral_comparison/`.
+
 Three submission workbooks are written to `results/supplementary_data/`:
 
 - `Supplementary_Data_1_GSE54650.xlsx`: circadian tissues.
@@ -90,6 +93,9 @@ python scripts/supplementary_feature_weights.py
 # Supplementary Figure 2: ordering and distortion benchmarks
 python scripts/supplementary_figure2_benchmarks.py --plot
 
+# Optional: benchmark clrcycle against CHIRAL on the Figure 1 gene panels
+python scripts/supplementary_chiral_comparison.py
+
 # Assemble the supplement document
 python scripts/build_supplement.py
 ```
@@ -118,7 +124,8 @@ SEP_2026/
 │   ├── fig3/                # endometrium outputs
 │   ├── supplementary_data/  # collated native feature weights
 │   ├── supp_fig1/           # CT10 heatmap data
-│   └── supp_fig2/           # benchmark outputs
+│   ├── supp_fig2/           # benchmark outputs
+│   └── chiral_comparison/   # CHIRAL vs clrcycle benchmark
 ├── scripts/
 │   ├── lib/                 # shared analysis functions
 │   ├── methods_figure.py
@@ -126,7 +133,8 @@ SEP_2026/
 │   ├── fig2_fucci.py
 │   ├── fig3_endometrium.py
 │   ├── supplementary_feature_weights.py
-│   └── supplementary_figure2_benchmarks.py
+│   ├── supplementary_figure2_benchmarks.py
+│   └── supplementary_chiral_comparison.py
 ├── environment.yml
 └── Makefile
 ```

@@ -20,7 +20,8 @@ conda activate sep_2026
 | 5 | `python scripts/fig3_endometrium.py` | Run endometrium discovery/transfer analysis and render Figure 3 | `results/fig3/`, `figures/Figure3.*` |
 | 6 | `python scripts/supplementary_feature_weights.py` | Collate native feature weights and render the liver CT10 heatmap | `results/supp_fig1/`, `results/supplementary_data/`, `figures/supp_fig1_liver_CT10_feature_weights.*` |
 | 7 | `python scripts/supplementary_figure2_benchmarks.py --plot` | Benchmark circular ordering and harmonic distortion | `results/supp_fig2/`, `figures/supp_fig2_ordering_benchmarks.*` |
-| 8 | `python scripts/build_supplement.py` | Assemble the supplementary-figure PDF | `results/supplementary_data/supplement.pdf` |
+| 8 | `python scripts/supplementary_chiral_comparison.py` | Benchmark clrcycle against CHIRAL on identical Figure 1 gene panels | `results/chiral_comparison/` |
+| 9 | `python scripts/build_supplement.py` | Assemble the supplementary-figure PDF | `results/supplementary_data/supplement.pdf` |
 
 `make all` performs the complete sequence, including downloads. `make figures`
 assumes the public inputs are already present.
@@ -96,6 +97,9 @@ numerical artifacts.
   those artifacts whenever a plot-only mode is available.
 - Some FUCCI and endometrium preprocessing steps call `Rscript`, so the Conda
   environment and its R dependencies must be active.
+- `supplementary_chiral_comparison.py` also calls `Rscript`, and additionally
+  requires the CHIRAL R package, which is not on CRAN/conda-forge:
+  `Rscript -e 'devtools::install_github("naef-lab/CHIRAL/Pkg/CHIRAL")'`.
 - The public-data downloader records file sizes and SHA-256 checksums in
   `data/processed/download_manifest.json`.
 
