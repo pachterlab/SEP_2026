@@ -1,4 +1,4 @@
-# Figure-analysis scripts
+# Analysis, figure, and workbook scripts
 
 This directory contains the complete analysis and rendering workflow for the
 clrcycle paper. Run commands from the repository root after activating the
@@ -22,15 +22,27 @@ conda activate sep_2026
 | 7 | `python scripts/supplementary_figure2_benchmarks.py --plot` | Benchmark circular ordering and harmonic distortion | `results/supp_fig2/`, `figures/supp_fig2_ordering_benchmarks.*` |
 | 8 | `python scripts/supplementary_chiral_comparison.py` | Benchmark CHIRAL on the exact current Figure 1 probe panels using shared R and error scoring | `results/chiral_comparison/` |
 | 9 | `python scripts/build_supplement.py` | Assemble the supplementary-figure PDF | `results/supplementary_data/supplement.pdf` |
+| 10 | `python scripts/supplementary_workbooks.py` | Package saved results into four Excel workbooks | `results/supplementary_data/Supplementary_Data_*.xlsx` |
 
-`make all` performs the complete sequence, including downloads. `make figures`
-assumes the public inputs are already present.
+`make all` downloads inputs and runs the main and supplementary figure workflow
+(steps 1–7 and 9). `make figures` skips downloads.
 `make supplements` runs steps 6, 7, and 9 from existing main-analysis results.
-Step 6 also packages the saved comparison in the separate
-`Supplementary_Data_4_CHIRAL_vs_clrcycle.xlsx`, with `Summary`,
-`Tissue_comparison`, `Sample_phases`, and `Methods` tabs. Run step 8 first only
-when the saved CHIRAL comparison needs refreshing. To rebuild just this workbook,
-run `python scripts/build_chiral_workbook.py`.
+These targets do not write Excel workbooks. Step 6 collates the feature-weight
+and ellipse CSVs; `make chiral` runs step 8 separately when its saved results
+are missing or need refreshing. `make workbooks` runs step 10 without rerunning
+analyses or figures.
+
+```bash
+make workbooks                       # all four, using saved tables
+make workbooks WORKBOOKS="1 2 3"       # no CHIRAL results required
+python scripts/supplementary_workbooks.py --workbooks 4
+```
+
+The workbook command checks selected inputs before writing outputs. Workbooks
+1–3 read `ellipse_geometry.csv` and the annotated `*_feature_weights.csv.gz`
+files in `results/supplementary_data/`. Workbook 4 reads `chiral_vs_clrcycle.csv`,
+`sample_phases.csv`, `summary.csv`, and `comparison_audit.json` from
+`results/chiral_comparison/`. Use `--out-dir PATH` to export elsewhere.
 
 The CHIRAL comparison reads the exact probe IDs and sample IDs from
 `results/fig1/all_tissues/` and checks that their expression values reconstruct
@@ -47,8 +59,8 @@ comparison does not assess robustness across initializations.
 
 ## Script structure
 
-The top-level scripts are executable entry points. Code shared across figures
-lives in `scripts/lib/`:
+The top-level scripts are executable entry points. Analysis and export helpers
+live in `scripts/lib/`:
 
 - `lib/circadian.py` parses and analyzes the GSE54650 tissue atlas.
 - `lib/fucci.py` performs the FUCCI clrcycle fit and embedding benchmark.
@@ -56,6 +68,8 @@ lives in `scripts/lib/`:
   transfer.
 - `lib/common.py` contains general parsing, projection, circular-statistics,
   styling, and provenance helpers.
+- `lib/workbooks.py` contains Excel writers, uniform table formatting, and
+  linked contents summaries, used by `supplementary_workbooks.py`.
 
 The sample panels use the core package's raw-coordinate ellipse fit. Ellipse
 curves and vertices undergo only the existing plotting rotation/reflection.
@@ -64,9 +78,11 @@ Each analysis writes `results/fig1/ellipse_geometry.csv`,
 Circadian also saves separate liver and atlas tables in its existing subfolders.
 The first three supplementary workbooks group feature results by analysis: circadian
 (GSE54650), FUCCI (GSE121265), and endometrium (GSE234354/GSE111976).
-Each has an `Ellipse_features` tab with vertex coordinates and metadata.
+All four workbooks start with a brief `Summary` contents tab and use matching
+formatting. The first three have an `Ellipse_features` tab with vertex coordinates and metadata.
 Circadian feature weights have one tab per tissue; FUCCI and endometrium each
 have a single `Feature_weights` tab. Combined ellipse CSV files are also saved.
+Workbook 4 has `Overall_scores`, `Tissue_comparison`, `Sample_phases`, and `Methods` tabs.
 Endometrium ellipses are computed only for the training projection in panels A and C.
 Held-out and transfer panels have no ellipse fits. Anisotropy p-values use
 1,000 radius-preserving random-angle draws with seed 17, without multiplicity
@@ -100,7 +116,9 @@ depend on the shell's current working directory. They never modify files under
 - `python scripts/supplementary_figure2_benchmarks.py` writes numerical
   benchmark outputs; add `--plot` to render the supplementary figure.
 - `python scripts/supplementary_feature_weights.py` collates the native
-  per-sample feature weights and renders Supplementary Figure 1.
+  per-sample feature weights and renders Supplementary Figure 1, without writing Excel files.
+- `python scripts/supplementary_workbooks.py` rebuilds the workbooks from saved
+  tables only; `--workbooks 1 2 3` or `--workbooks 4` selects a subset.
 
 These modes are useful when adjusting presentation while preserving validated
 numerical artifacts.

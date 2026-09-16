@@ -14,7 +14,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from build_chiral_workbook import write_chiral_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "vendor/clrcycle"))
@@ -23,7 +22,6 @@ import clrcycle
 OUT = ROOT / "results/supplementary_data"
 FIGURES = ROOT / "figures"
 FIG1_OUT = ROOT / "results/supp_fig1"
-EXCEL_MAX_DATA_ROWS = 1_048_575
 ENDOMETRIUM_STAGES = {
     1: "Menstrual",
     2: "Early proliferative",
@@ -264,38 +262,7 @@ def collate_ellipses():
     return geometry, vertices
 
 
-def write_workbook(path, geometry, table):
-    """Write ellipse features and feature weights, separating circadian tissues."""
-    from openpyxl.comments import Comment
-
-    with pd.ExcelWriter(path, engine="openpyxl") as writer:
-        geometry.to_excel(writer, sheet_name="Ellipse_features", index=False)
-        if "tissue" in table:
-            labels = geometry.dropna(subset=["tissue", "label"]).set_index("tissue")["label"].to_dict()
-            for tissue, weights in table.groupby("tissue", sort=False):
-                weights.to_excel(writer, sheet_name=labels[tissue], index=False)
-        else:
-            table.to_excel(writer, sheet_name="Feature_weights", index=False)
-        notes = {
-            "axis_ratio": "b/a: minor semiaxis divided by major semiaxis; 1 denotes a circle.",
-            "displacement_ratio": "d/a: distance of the ellipse center from the origin divided by the major semiaxis.",
-            "feature_weight": "Signed contribution to the sample radius. Feature weights sum to the sample clrcycle radius.",
-            "metadata_reference": "Reference used to label ellipse vertices. Repeated references for one cohort share the same intrinsic geometry. Endometrium ellipse results describe training biopsies only.",
-            "orientation": "Major-axis orientation in radians modulo pi about the fitted center. Geometry retains raw clrcycle units.",
-            "anisotropy_pvalue": "Radius-preserving random-angle test of anisotropy: 1000 randomizations, seed 17; no multiple-testing adjustment. Major-vertex phase/stage values are omitted unless p < 0.05. This does not test general cyclicity.",
-        }
-        for sheet in writer.book.worksheets:
-            sheet.freeze_panes = "A2"
-            sheet.auto_filter.ref = sheet.dimensions
-            sheet.sheet_view.showGridLines = False
-            for cell in sheet[1]:
-                if cell.value in notes:
-                    cell.comment = Comment(notes[cell.value], "clrcycle")
-                sheet.column_dimensions[cell.column_letter].width = min(36, max(14, len(cell.value) + 2))
-
-
 def main():
-    chiral_workbook = write_chiral_workbook()
     OUT.mkdir(parents=True, exist_ok=True)
     FIGURES.mkdir(exist_ok=True)
     sources = {
@@ -321,19 +288,6 @@ def main():
             raise RuntimeError(f"{key} feature weights do not reconstruct sample radii")
         table.to_csv(OUT / names[key], index=False)
     ellipse_geometry, ellipse_vertices = collate_ellipses()
-    workbook_names = {
-        "Circadian": "Supplementary_Data_1_GSE54650.xlsx",
-        "FUCCI": "Supplementary_Data_2_GSE121265.xlsx",
-        "Endometrium": "Supplementary_Data_3_GSE234354_GSE111976.xlsx",
-    }
-    included = {key: len(table) <= EXCEL_MAX_DATA_ROWS for key, table in tables.items()}
-    for key, table in tables.items():
-        if not included[key]:
-            raise RuntimeError(f"{key} feature weights exceed the Excel row limit")
-        geometry = ellipse_geometry.loc[ellipse_geometry.dataset.eq(key)].dropna(axis=1, how="all").copy()
-        geometry["displacement_ratio"] = geometry.ellipse_center_distance / geometry.major_semiaxis
-        write_workbook(OUT / workbook_names[key], geometry, table)
-
     ct10_ids, plotted_features, ct10_error = liver_figure()
     audit = {
         "clrcycle_version": version("clrcycle"),
@@ -349,14 +303,9 @@ def main():
                 "fits": int(table["tissue"].nunique()) if "tissue" in table else 1,
                 "feature_weight_rows": len(table),
                 "max_radius_reconstruction_error": reconstruction_errors[key],
-                "included_in_excel": included[key],
                 "csv": str(OUT / names[key]),
             }
             for key, table in tables.items()
-        },
-        "workbooks": {
-            **{key: str(OUT / name) for key, name in workbook_names.items()},
-            "CHIRAL_comparison": str(chiral_workbook),
         },
         "ellipse_summary_rows": len(ellipse_geometry),
         "ellipse_vertex_rows": len(ellipse_vertices),
