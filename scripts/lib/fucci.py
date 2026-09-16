@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 from pathlib import Path
-import subprocess
 import gzip
 import sys
 import numpy as np
@@ -15,7 +14,7 @@ from umap import UMAP
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "vendor/clrcycle"))
 import clrcycle
-from lib.common import paper_ellipse
+from lib.common import paper_ellipse, run_r
 
 TWO_PI = 2 * np.pi
 SEED = 17
@@ -32,26 +31,14 @@ def extract_source_tables(eset: Path, fit_quant: Path, out: Path):
     with gzip.open(eset, "rb") as source, inner.open("wb") as target:
         target.write(source.read())
     code = r"""suppressPackageStartupMessages(library(Biobase)); a<-commandArgs(TRUE)
-x<-readRDS(gzfile(a[1])); pd<-pData(x); pc<-prcomp(pd[,c("rfp.median.log10sum.adjust","gfp.median.log10sum.adjust")],center=TRUE,scale.=TRUE)
+x<-readRDS(a[1]); pd<-pData(x); pc<-prcomp(pd[,c("rfp.median.log10sum.adjust","gfp.median.log10sum.adjust")],center=TRUE,scale.=TRUE)
 ang<-atan2(pc$x[,2],pc$x[,1]); ang[ang<0]<-ang[ang<0]+2*pi
 m<-data.frame(cell_id=rownames(pd),experiment=pd$experiment,chip_id=pd$chip_id,filter_all=pd$filter_all,theta=pd$theta,theta_reconstructed=((2*pi)-ang)%%(2*pi),check.names=FALSE)
 write.table(m,a[3],sep="\t",row.names=FALSE,quote=FALSE); fd<-fData(x)
 f<-data.frame(feature_id=rownames(fd),name=fd$name,source=fd$source,check.names=FALSE); write.table(f,a[4],sep="\t",row.names=FALSE,quote=FALSE)
 fit<-readRDS(a[2]); pve<-vapply(fit,function(g) g$trend.pve,numeric(1)); o<-order(pve,decreasing=TRUE,na.last=NA)[seq_len(100)]
 r<-data.frame(rank=seq_len(100),ENSG=names(pve)[o],pve=pve[o]); write.table(r,a[5],sep="\t",row.names=FALSE,quote=FALSE)"""
-    subprocess.run(
-        [
-            "Rscript",
-            "-e",
-            code,
-            str(inner),
-            str(fit_quant),
-            str(meta),
-            str(features),
-            str(ranking),
-        ],
-        check=True,
-    )
+    run_r(code, inner, fit_quant, meta, features, ranking)
     return meta, features, ranking
 
 

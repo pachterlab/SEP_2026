@@ -14,7 +14,6 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-import subprocess
 import sys
 
 import numpy as np
@@ -23,7 +22,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from lib.circadian import LABELS, align, read_matrix
-from lib.common import write_versions
+from lib.common import write_versions, run_r
 
 RAW = ROOT / "data/raw/GSE54650/GSE54650_series_matrix.txt.gz"
 FIG1 = ROOT / "results/fig1/all_tissues"
@@ -109,10 +108,7 @@ def run_chiral(matrix, tissue_dir, rescore_only=False):
             raise ValueError(f"Saved CHIRAL phase file has changed: {phase_path}")
     else:
         mat_path.write_text(matrix_text)
-        done = subprocess.run(
-            ["Rscript", "-e", CHIRAL_CODE, str(mat_path), str(phase_path), str(SEED)],
-            capture_output=True, text=True, check=True,
-        )
+        done = run_r(CHIRAL_CODE, mat_path, phase_path, SEED, capture_output=True, text=True)
         metadata = {
             "input_sha256": fingerprint,
             "phase_sha256": hashlib.sha256(phase_path.read_bytes()).hexdigest(),

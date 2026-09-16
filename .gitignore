@@ -28,11 +28,13 @@ data/processed/*
 *.tmp
 *~
 
-# Generated supplementary-figure document
+# Optional local supplementary-document builder and all of its outputs
 /scripts/build_supplement.py
-/results/supplementary_data/supplement.tex
-/results/supplementary_data/supplement.pdf
+/results/supplementary_data/supplement.*
 
 # Generated CHIRAL comparison results
 /results/chiral_comparison/
 /results/supplementary_data/Supplementary_Data_4_CHIRAL_vs_clrcycle.xlsx
+
+# Local environment-reproduction audits
+/results/reproducibility/

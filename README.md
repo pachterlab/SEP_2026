@@ -17,7 +17,7 @@ This repository contains the data-processing, analysis, benchmarking, and figure
 
 Figures are written to `figures/` as PDF, SVG, and 300-dpi PNG files. Numerical outputs are written to the corresponding directory under `results/`.
 
-`scripts/supplementary_chiral_comparison.py` is a standalone benchmark (not part of `make figures`/`make all`): it fits CHIRAL (Naef lab) on the exact 240-probe panels and samples from the current Figure 1 (`results/fig1/all_tissues/`), without gene-symbol deduplication. It verifies that the shared expression entries reconstruct the saved clrcycle coordinates, then scores both methods with Figure 1's phase-resultant R and mean absolute phase error in hours using the same rotation/reflection alignment. It requires the CHIRAL R package in addition to the Conda environment; see `scripts/README.md` for the install command. Output: `results/chiral_comparison/`.
+`scripts/supplementary_chiral_comparison.py` is a standalone benchmark (not part of `make figures`/`make all`): it fits CHIRAL (Naef lab) on the exact 240-probe panels and samples from the current Figure 1 (`results/fig1/all_tissues/`), without gene-symbol deduplication. It verifies that the shared expression entries reconstruct the saved clrcycle coordinates, then scores both methods with Figure 1's phase-resultant R and mean absolute phase error in hours using the same rotation/reflection alignment. The project environment setup installs its pinned CHIRAL R package. Output: `results/chiral_comparison/`.
 
 The comparison replaces the earlier 96-gene benchmark, which used different R
 definitions for the two methods. Raw and aligned phases and input fingerprints
@@ -63,9 +63,19 @@ each analysis.
 ```bash
 git clone <repository-url>
 cd SEP_2026
-conda env create -f environment.yml
+make environment
 conda activate sep_2026
+make check-env
 ```
+
+The setup installs Python dependencies, R, Matrix, Biobase, and a pinned CHIRAL
+revision. clrcycle is installed from a pinned Git revision, so no local `vendor/`
+folder is required. R 3.6.3 and reference BLAS/LAPACK preserve the original
+CHIRAL calculation; Python 3.11.8 permits these libraries in one environment.
+`make environment` also updates an existing environment.
+Use `make environment ENV_NAME=another_name` for a separate installation.
+The optional combined supplement-document builder is local and ignored;
+LaTeX is not required. Individual figure PDFs are still generated.
 
 ## Download and prepare data
 
@@ -112,13 +122,10 @@ python scripts/supplementary_figure2_benchmarks.py --plot
 
 # Optional: benchmark clrcycle against CHIRAL on the Figure 1 gene panels
 python scripts/supplementary_chiral_comparison.py
-
-# Assemble the supplement document
-python scripts/build_supplement.py
 ```
 
-`make supplements` rebuilds the supplementary figures, collated CSVs,
-and supplement PDF from existing main-analysis results. It does not build workbooks.
+`make supplements` rebuilds the supplementary figures and collated CSVs
+from existing main-analysis results. Workbooks are generated separately.
 
 ## Generate supplementary workbooks
 
@@ -175,6 +182,12 @@ SEP_2026/
 ## Reproducibility
 
 Run all commands from the repository root with the `sep_2026` environment active. Stochastic analyses use fixed random seeds, and scripts write software-version records alongside their numerical outputs.
+
+The complete workflow was tested in a fresh Linux x86_64 environment: 144
+numerical tables and all four workbooks matched the saved values exactly.
+All nine PNGs were byte-identical; PDF/SVG content matched after excluding
+timestamps and generated SVG IDs. Earlier 96-probe and other legacy artifacts
+remain historical files; the current Make targets do not regenerate them.
 
 ## Citation
 

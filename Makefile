@@ -1,7 +1,9 @@
-.PHONY: data figures supplements workbooks chiral all
+.PHONY: data figures supplements workbooks chiral environment check-env all
 
 PYTHON := python
 WORKBOOKS := 1 2 3 4
+CONDA := conda
+ENV_NAME := sep_2026
 
 data:
 	$(PYTHON) scripts/download_data.py
@@ -16,13 +18,20 @@ figures:
 supplements:
 	$(PYTHON) scripts/supplementary_feature_weights.py
 	$(PYTHON) scripts/supplementary_figure2_benchmarks.py --plot
-	$(PYTHON) scripts/build_supplement.py
 
 workbooks:
 	$(PYTHON) scripts/supplementary_workbooks.py --workbooks $(WORKBOOKS)
 
 chiral:
 	$(PYTHON) scripts/supplementary_chiral_comparison.py
+
+environment:
+	$(CONDA) env update --name $(ENV_NAME) --file environment.yml
+	$(CONDA) run --no-capture-output --name $(ENV_NAME) Rscript scripts/install_chiral.R
+	$(CONDA) run --no-capture-output --name $(ENV_NAME) python scripts/check_environment.py
+
+check-env:
+	$(PYTHON) scripts/check_environment.py
 
 all: data
 	$(MAKE) figures PYTHON="$(PYTHON)"

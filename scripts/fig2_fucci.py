@@ -9,7 +9,6 @@ passing ``--plot`` additionally writes ``figures/Figure2.{pdf,svg,png}``.
 from pathlib import Path
 import sys
 import argparse
-import subprocess
 from io import StringIO
 import matplotlib
 
@@ -21,7 +20,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from lib.common import draw_ellipse, ellipse_legend_handles, ellipse_stats_box
+from lib.common import draw_ellipse, ellipse_legend_handles, ellipse_stats_box, run_r
 from lib.fucci import (
     TWO_PI,
     extract_source_tables,
@@ -80,18 +79,9 @@ order = analysis["order"]
 def published_peak_phases():
     """Extract each fitted gene's published peak phase from the R object."""
     code = """a<-commandArgs(TRUE);fit<-readRDS(a[1]);m<-read.delim(a[2]);ts<-sort(m$theta);cat("ENSG\\ttheta_g\\n");for(g in a[-c(1,2)]){v<-fit[[g]]$trend.yy;cat(g,"\\t",if(length(v)==length(ts)) ts[which.max(v)] else NA,"\\n",sep="")}"""
-    done = subprocess.run(
-        [
-            "Rscript",
-            "-e",
-            code,
-            str(RAW / "fit.quant.rds"),
-            str(PROCESSED / "GSE121265_metadata.tsv"),
-            *order.feature.astype(str),
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
+    done = run_r(
+        code, RAW / "fit.quant.rds", PROCESSED / "GSE121265_metadata.tsv",
+        *order.feature.astype(str), capture_output=True, text=True,
     )
     return pd.read_csv(StringIO(done.stdout), sep="\t").theta_g.to_numpy(float)
 

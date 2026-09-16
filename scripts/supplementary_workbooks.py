@@ -51,8 +51,12 @@ def main():
         if number == 4:
             write_chiral_workbook(path, CHIRAL)
         else:
+            # Preserve the existing Excel exports' CSV parsing precision.
+            # The endometrium workbook uses pandas' default float conversion;
+            # round-trip conversion shifts some saved cells by less than 1e-15.
+            precision = None if dataset == "Endometrium" else "round_trip"
             table = pd.read_csv(SOURCE / f"{dataset.lower()}_feature_weights.csv.gz",
-                                dtype={"feature": str}, float_precision="round_trip")
+                                dtype={"feature": str}, float_precision=precision)
             geometry = pd.read_csv(SOURCE / "ellipse_geometry.csv", float_precision="round_trip")
             geometry = geometry.loc[geometry.dataset.eq(dataset)].dropna(axis=1, how="all").copy()
             geometry["displacement_ratio"] = geometry.ellipse_center_distance / geometry.major_semiaxis

@@ -8,6 +8,8 @@ import json
 import platform
 import re
 import sys
+import subprocess
+from tempfile import NamedTemporaryFile
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
@@ -15,6 +17,16 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+
+def run_r(code, *args, executable="Rscript", **kwargs):
+    """Run an R source file, avoiding launcher-dependent escaping of -e code."""
+    with NamedTemporaryFile(mode="w", suffix=".R", encoding="utf-8") as script:
+        script.write(code)
+        script.flush()
+        return subprocess.run(
+            [executable, script.name, *(str(arg) for arg in args)], check=True, **kwargs
+        )
 
 
 SEED = 17

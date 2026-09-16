@@ -8,7 +8,7 @@ and stage calibration. External annotations are loaded only after projection.
 
 from __future__ import annotations
 
-import gzip, json, re, shutil, subprocess, sys, zipfile
+import gzip, json, re, shutil, sys, zipfile
 from xml.etree import ElementTree as ET
 from pathlib import Path
 
@@ -39,7 +39,7 @@ DIRS = {
 }
 sys.path.insert(0, str(ROOT / "vendor/clrcycle"))
 import clrcycle
-from lib.common import paper_ellipse
+from lib.common import paper_ellipse, run_r
 
 SEED, TOP_N, TEST_SIZE, N_SWAPS = 17, 250, 0.20, 4000
 TWO_PI = 2 * np.pi
@@ -198,11 +198,8 @@ def r_pseudobulk(platform: str, genes: list[str]) -> pd.DataFrame:
         req<-readLines(a[3]);ok<-req%in%rownames(x);stopifnot(sum(ok)>=3);
         md<-md[match(colnames(x),md$cell_name),];stopifnot(all(md$cell_name==colnames(x)),!anyNA(md$donor));
         z<-sparse.model.matrix(~0+factor(md$donor));pb<-x[req[ok],,drop=FALSE]%*%z;
-        colnames(pb)<-sub("factor\\(md\\$donor\\)","",colnames(pb));write.table(as.matrix(t(pb)),a[4],sep="\t",quote=FALSE,col.names=NA)"""
-        subprocess.run(
-            ["Rscript", "-e", code, str(matrix), str(md), str(req), str(out)],
-            check=True,
-        )
+        colnames(pb)<-sub("factor(md$donor)","",colnames(pb),fixed=TRUE);write.table(as.matrix(t(pb)),a[4],sep="\t",quote=FALSE,col.names=NA)"""
+        run_r(code, matrix, md, req, out)
         pb = pd.read_csv(out, sep="\t", index_col=0)
         pb.index = pb.index.astype(str)
         return pb
@@ -225,10 +222,7 @@ def tenx_gene_names() -> set[str]:
     code = r"""suppressPackageStartupMessages(library(Matrix));a<-commandArgs(TRUE);
     x<-readRDS(a[1]);write.table(data.frame(gene=x@Dimnames[[1]]),a[2],
     row.names=FALSE,col.names=FALSE,quote=FALSE)"""
-    subprocess.run(
-        ["Rscript", "-e", code, str(PROCESSED / "GSE111976_ct_endo_10x.rds"), str(out)],
-        check=True,
-    )
+    run_r(code, PROCESSED / "GSE111976_ct_endo_10x.rds", out)
     genes = set(out.read_text().splitlines())
     assert len(genes) > 10000
     return genes
@@ -406,6 +400,30 @@ def stage_boundaries(ctr):
     return pd.DataFrame({"stage_before": stages, "boundary_radians": b})
 
 
+def gene_circle_annotations(train, train_meta, feature_order, orientation, selected):
+    """Annotate the frozen gene order after fitting, using training histology."""
+    hist_phase = TWO_PI * (
+        np.array([STAGE_DAY[int(stage)] for stage in train_meta.histology_stage]) - 1
+    ) / 28
+    design = np.column_stack([np.ones(len(hist_phase)), np.cos(hist_phase), np.sin(hist_phase)])
+    beta = np.linalg.lstsq(
+        design, np.log1p(train[feature_order.feature]).to_numpy(), rcond=None
+    )[0]
+    peak = np.mod(np.arctan2(beta[2], beta[1]), TWO_PI)
+    stage_angle = TWO_PI * (np.array([STAGE_DAY[int(stage)] for stage in STAGES]) - 1) / 28
+    peak_stage = STAGES[np.argmin(abs(np.angle(np.exp(1j * (peak[:, None] - stage_angle)))), axis=1)]
+    amplitude = np.hypot(beta[1], beta[2])
+    table = pd.DataFrame({
+        "gene": feature_order.feature,
+        "gene_angle": apply_orientation(feature_order.clrcycle_angle.to_numpy(), orientation),
+        "posthoc_peak_histology_stage": peak_stage,
+        "posthoc_harmonic_amplitude": amplitude,
+        "posthoc_amplitude_rank": pd.Series(amplitude).rank(ascending=False, method="first").astype(int),
+        "highlighted_top20_training_variance": feature_order.feature.isin(selected.index[:20]),
+    })
+    return table
+
+
 def run_shared_analysis():
     """Run discovery, frozen transfers, validation, and artifact export."""
     # Stage 1: load RNA-seq discovery data and make a reproducible held-out split.
@@ -571,6 +589,9 @@ def run_shared_analysis():
         DIRS["tables"] / "summary_metrics.csv"
     )
     orientation = {**p, "training_stage_R": p["training_stage_R"]}
+    gene_circle_annotations(train, train_meta, fit.feature_order, orientation, selected).to_csv(
+        DIRS["tables"] / "gene_circle_posthoc_histology_stage.csv", index=False
+    )
     (DIRS["tables"] / "training_orientation.json").write_text(
         json.dumps(orientation, indent=2) + "\n"
     )

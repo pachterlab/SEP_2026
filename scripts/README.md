@@ -6,7 +6,9 @@ clrcycle paper. Run commands from the repository root after activating the
 
 ```bash
 cd /path/to/SEP_2026
+make environment
 conda activate sep_2026
+make check-env
 ```
 
 ## Reproduction order
@@ -21,15 +23,14 @@ conda activate sep_2026
 | 6 | `python scripts/supplementary_feature_weights.py` | Collate native feature weights and render the liver CT10 heatmap | `results/supp_fig1/`, `results/supplementary_data/`, `figures/supp_fig1_liver_CT10_feature_weights.*` |
 | 7 | `python scripts/supplementary_figure2_benchmarks.py --plot` | Benchmark circular ordering and harmonic distortion | `results/supp_fig2/`, `figures/supp_fig2_ordering_benchmarks.*` |
 | 8 | `python scripts/supplementary_chiral_comparison.py` | Benchmark CHIRAL on the exact current Figure 1 probe panels using shared R and error scoring | `results/chiral_comparison/` |
-| 9 | `python scripts/build_supplement.py` | Assemble the supplementary-figure PDF | `results/supplementary_data/supplement.pdf` |
-| 10 | `python scripts/supplementary_workbooks.py` | Package saved results into four Excel workbooks | `results/supplementary_data/Supplementary_Data_*.xlsx` |
+| 9 | `python scripts/supplementary_workbooks.py` | Package saved results into four Excel workbooks | `results/supplementary_data/Supplementary_Data_*.xlsx` |
 
 `make all` downloads inputs and runs the main and supplementary figure workflow
-(steps 1–7 and 9). `make figures` skips downloads.
-`make supplements` runs steps 6, 7, and 9 from existing main-analysis results.
+(steps 1–7). `make figures` skips downloads.
+`make supplements` runs steps 6 and 7 from existing main-analysis results.
 These targets do not write Excel workbooks. Step 6 collates the feature-weight
 and ellipse CSVs; `make chiral` runs step 8 separately when its saved results
-are missing or need refreshing. `make workbooks` runs step 10 without rerunning
+are missing or need refreshing. `make workbooks` runs step 9 without rerunning
 analyses or figures.
 
 ```bash
@@ -67,7 +68,7 @@ live in `scripts/lib/`:
 - `lib/endometrium.py` performs RNA-seq discovery and frozen cross-platform
   transfer.
 - `lib/common.py` contains general parsing, projection, circular-statistics,
-  styling, and provenance helpers.
+  styling, provenance, and portable R-execution helpers.
 - `lib/workbooks.py` contains Excel writers, uniform table formatting, and
   linked contents summaries, used by `supplementary_workbooks.py`.
 
@@ -87,6 +88,8 @@ Endometrium ellipses are computed only for the training projection in panels A a
 Held-out and transfer panels have no ellipse fits. Anisotropy p-values use
 1,000 radius-preserving random-angle draws with seed 17, without multiplicity
 adjustment; leave-one-out columns report robustness, not significance.
+Figure 3's gene-circle annotations are generated from training expression and
+histology after the gene order is frozen; no cached annotation table is required.
 
 Each analysis follows the same broad sequence:
 
@@ -132,9 +135,14 @@ numerical artifacts.
   those artifacts whenever a plot-only mode is available.
 - Some FUCCI and endometrium preprocessing steps call `Rscript`, so the Conda
   environment and its R dependencies must be active.
-- `supplementary_chiral_comparison.py` also calls `Rscript`, and additionally
-  requires the CHIRAL R package, which is not on CRAN/conda-forge:
-  `Rscript -e 'devtools::install_github("naef-lab/CHIRAL/Pkg/CHIRAL")'`.
+- `make environment` installs R, Matrix, and Biobase through Conda, then installs
+  the pinned CHIRAL revision with `scripts/install_chiral.R` into that R library.
+  R 3.6.3 and reference BLAS/LAPACK match the original CHIRAL runtime; Python
+  3.11.8 is pinned for compatibility with those libraries.
+  `make check-env` checks imports, the environment-local R packages, a small
+  CHIRAL fit, and Excel/PDF/SVG/PNG export. It rejects a fallback to system R.
+- The optional combined supplement-document builder and its outputs are ignored
+  and excluded from Make targets. No LaTeX installation is needed.
 - The public-data downloader records file sizes and SHA-256 checksums in
   `data/processed/download_manifest.json`.
 
