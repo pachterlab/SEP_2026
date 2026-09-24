@@ -1,23 +1,32 @@
-"""Methods Figure: standalone clrcycle graphical workflow.
+"""Figure 1: standalone clrcycle graphical workflow.
 
 This script contains the complete figure implementation.  It has no runtime
-dependency on the original clrcycle figure directory and draws every panel,
-equation, and transition arrow natively with Matplotlib.
+dependency on the original clrcycle figure directory and draws every
+panel and transition arrow with Matplotlib, and typesets math with LaTeX.
+Requires a LaTeX installation, cm-super fonts, and dvipng on PATH.
 """
 
 from __future__ import annotations
 
 from itertools import permutations
+import os
+from shutil import which
 from pathlib import Path
 
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from lib.figure_style import font_rcparams
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patches import FancyArrowPatch
 
+
+# Also support dvipng installed locally without administrator privileges.
+LOCAL_BIN = Path.home() / ".local" / "bin"
+if which("dvipng") is None and (LOCAL_BIN / "dvipng").is_file():
+    os.environ["PATH"] = str(LOCAL_BIN) + os.pathsep + os.environ.get("PATH", "")
 
 ROOT = Path(__file__).resolve().parents[1]
 FIGURE_DIR = ROOT / "figures"
@@ -190,6 +199,7 @@ def draw_composition(
         ha="center",
         va="center",
         fontsize=23,
+        usetex=True,
     )
     axis.text(
         0.73,
@@ -199,6 +209,7 @@ def draw_composition(
         ha="center",
         va="center",
         fontsize=20,
+        usetex=True,
     )
     axis.set(xlim=(-0.18, 2.05), ylim=(-0.18, 1.02), aspect="equal")
     axis.axis("off")
@@ -243,13 +254,14 @@ def draw_covariance(axis: plt.Axes, covariance: np.ndarray, figure: plt.Figure) 
     for row in range(3):
         for column in range(3):
             label = (
-                f"Var({'ABC'[row]})"
+                rf"$\mathrm{{Var}}({'ABC'[row]})$"
                 if row == column
-                else f"Cov({'ABC'[row]},{'ABC'[column]})"
+                else rf"$\mathrm{{Cov}}({'ABC'[row]},{'ABC'[column]})$"
             )
             color = "white" if covariance[row, column] > 0.1 * limit else "black"
             matrix_axis.text(
-                column, row, label, ha="center", va="center", fontsize=11, color=color
+                column, row, label, ha="center", va="center", fontsize=11, color=color,
+                usetex=True,
             )
     matrix_axis.set_xticks(range(3), list("ABC"))
     matrix_axis.set_yticks(range(3), list("ABC"))
@@ -268,6 +280,7 @@ def draw_covariance(axis: plt.Axes, covariance: np.ndarray, figure: plt.Figure) 
         ha="center",
         fontsize=20,
         fontweight="bold",
+        usetex=True,
     )
     colorbar_axis = axis.inset_axes([0.86, 0.19, 0.038, 0.55])
     colorbar = figure.colorbar(image, cax=colorbar_axis)
@@ -288,6 +301,7 @@ def draw_optimize(axis: plt.Axes) -> None:
         ha="center",
         fontsize=28,
         fontweight="bold",
+        usetex=True,
     )
     axis.text(
         0.5,
@@ -296,6 +310,7 @@ def draw_optimize(axis: plt.Axes) -> None:
         transform=axis.transAxes,
         ha="center",
         fontsize=17,
+        usetex=True,
     )
     axis.text(
         0.5,
@@ -304,6 +319,7 @@ def draw_optimize(axis: plt.Axes) -> None:
         transform=axis.transAxes,
         ha="center",
         fontsize=17,
+        usetex=True,
     )
     axis.text(
         0.5,
@@ -312,15 +328,17 @@ def draw_optimize(axis: plt.Axes) -> None:
         transform=axis.transAxes,
         ha="center",
         fontsize=22,
+        usetex=True,
     )
     axis.text(
         0.5,
         0.32,
-        r"$c_g=\sqrt{\frac{2}{G}}\cos\theta_g,\qquad"
+        r"$c_g=\sqrt{\frac{2}{G}}\cos\theta_g,\qquad "
         r"s_g=\sqrt{\frac{2}{G}}\sin\theta_g$",
         transform=axis.transAxes,
         ha="center",
         fontsize=22,
+        usetex=True,
     )
     axis.text(
         0.5,
@@ -332,6 +350,7 @@ def draw_optimize(axis: plt.Axes) -> None:
         color=INK,
         fontweight="bold",
         bbox=dict(boxstyle="round,pad=.22", fc="white", ec=INK, lw=2),
+        usetex=True,
     )
     axis.text(
         0.5,
@@ -340,6 +359,7 @@ def draw_optimize(axis: plt.Axes) -> None:
         transform=axis.transAxes,
         ha="center",
         fontsize=17,
+        usetex=True,
     )
     axis.axis("off")
 
@@ -401,9 +421,10 @@ def draw_gene_circle(
             color=gene_color,
             ha="center",
             va="center",
+            usetex=True,
         )
-        axis.text(1.14, -0.14, r"$\cos\theta$", fontsize=18)
-        axis.text(0.05, 1.16, r"$\sin\theta$", fontsize=18)
+        axis.text(1.14, -0.14, r"$\cos\theta$", fontsize=18, usetex=True)
+        axis.text(0.05, 1.16, r"$\sin\theta$", fontsize=18, usetex=True)
     else:
         # Fit all ten cells. Uniform ellipse phases make this moment fit exact.
         # For uniformly sampled phases, 2 * covariance gives squared axes.
@@ -443,6 +464,7 @@ def draw_gene_circle(
             color=INK,
             ha="center",
             va="center",
+            usetex=True,
         )
         axis.text(
             0.57 * point[0] - 0.13,
@@ -451,9 +473,10 @@ def draw_gene_circle(
             fontsize=20,
             color=INK,
             ha="center",
+            usetex=True,
         )
-        axis.text(1.14, -0.14, r"$u_i$", fontsize=20)
-        axis.text(0.05, 1.16, r"$v_i$", fontsize=20)
+        axis.text(1.14, -0.14, r"$u_i$", fontsize=20, usetex=True)
+        axis.text(0.05, 1.16, r"$v_i$", fontsize=20, usetex=True)
 
     axis.set(xlim=(-1.68, 1.67) if projected is not None else (-1.30, 1.40),
              ylim=(-1.22, 1.28), aspect="equal")
@@ -472,6 +495,7 @@ def draw_fourier(axis: plt.Axes, order: np.ndarray) -> None:
         ha="center",
         fontsize=20,
         color=GENE_COLORS[order[1]],
+        usetex=True,
     )
 
 
@@ -488,11 +512,12 @@ def draw_projection(axis: plt.Axes, order: np.ndarray, projected: np.ndarray) ->
         0.5,
         -0.065,
         r"$u_i=\sum_g Z_{i,\widehat{\pi}(g)}c_g$"
-        "   "
+        r"\hspace{1.5em}"
         r"$v_i=\sum_g Z_{i,\widehat{\pi}(g)}s_g$",
         transform=axis.transAxes,
         ha="center",
         fontsize=24,
+        usetex=True,
     )
 
 
@@ -595,7 +620,7 @@ def render_figure() -> None:
     values = workflow_values()
     plt.rcParams.update(
         {
-            "font.family": "DejaVu Sans",
+            **font_rcparams(),
             "font.size": 18,
             "axes.titlesize": 24,
             "svg.fonttype": "none",
@@ -666,15 +691,15 @@ def render_figure() -> None:
     block_arrow(figure, axes[2], axes[3], horizontal_offset=0.018)
     block_arrow(figure, axes[3], axes[4])
 
-    figure.suptitle("clrcycle workflow", fontsize=30, fontweight="bold", y=0.97)
+    figure.suptitle("clrcycle architecture", fontsize=30, fontweight="bold", y=0.97)
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-    figure.savefig(FIGURE_DIR / "Methods_Figure.pdf")
-    figure.savefig(FIGURE_DIR / "Methods_Figure.svg")
-    figure.savefig(FIGURE_DIR / "Methods_Figure.png", dpi=300)
+    figure.savefig(FIGURE_DIR / "Figure1.pdf")
+    figure.savefig(FIGURE_DIR / "Figure1.svg")
+    figure.savefig(FIGURE_DIR / "Figure1.png", dpi=300)
     plt.close(figure)
     render_individual_panels(values)
 
 
 if __name__ == "__main__":
     render_figure()
-    print("Wrote Methods Figure PDF/SVG/PNG from one standalone native script")
+    print("Wrote Figure 1 PDF/SVG/PNG from one standalone native script")

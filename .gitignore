@@ -38,3 +38,6 @@ data/processed/*
 
 # Local environment-reproduction audits
 /results/reproducibility/
+
+# Helvetica font binaries are supplied locally.
+/fonts/Helvetica/

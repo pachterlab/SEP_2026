@@ -1,6 +1,11 @@
 # Scientific Python packages match the saved results. Python 3.11.8 allows
 # the original R 3.6.3/reference BLAS runtime in the same environment.
+# Run `make system-deps` first on Debian/Ubuntu for the LaTeX figure tools
+# listed in system-requirements.txt (these are system packages, not pip packages).
 # Run `make environment` to also install the pinned CHIRAL R package.
+# Install genuine Helvetica separately, or put its font files in fonts/Helvetica/.
+# See fonts/README.md. Substitution is disabled.
+# `make check-env` validates Helvetica and actual LaTeX PDF/SVG/PNG rendering.
 name: sep_2026
 channels:
   - conda-forge

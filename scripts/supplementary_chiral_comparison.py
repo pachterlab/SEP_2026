@@ -1,9 +1,9 @@
-"""Compare CHIRAL with current Figure 1 using identical probes and scoring.
+"""Compare CHIRAL with current Figure 2 using identical probes and scoring.
 
 Use the saved 240-probe panels and sample coordinates in results/fig1/all_tissues.
 Both methods use lib.circadian.align: reflection/rotation maximizing the phase
 resultant R, followed by mean absolute circular phase error in hours. Collection
-time is used for scoring, and was also used upstream to select Figure 1 panels;
+time is used for scoring, and was also used upstream to select Figure 2 panels;
 this is a comparison conditional on those panels, not label-free discovery.
 
 Requires the CHIRAL R package. Use --rescore-only to reuse saved raw CHIRAL
@@ -49,7 +49,7 @@ cat("CHIRAL", as.character(packageVersion("CHIRAL")),
 
 
 def score_phase(phase, ct):
-    """Use exactly the Figure 1 alignment and metrics for either method."""
+    """Use exactly the Figure 2 alignment and metrics for either method."""
     phase, ct = np.asarray(phase, float), np.asarray(ct, float)
     if phase.ndim != 1 or phase.shape != ct.shape or len(phase) < 3:
         raise ValueError("Phase and CT must be matched vectors of at least three samples")
@@ -64,7 +64,7 @@ def score_phase(phase, ct):
 
 
 def matched_panel(expr, features, samples):
-    """Extract exact Figure 1 probes and verify the saved CLR projection."""
+    """Extract exact Figure 2 probes and verify the saved CLR projection."""
     features = features.sort_values("acs_position")
     ids, names = features.ID_REF.tolist(), samples["sample"].tolist()
     if not ids or len(set(ids)) != len(ids) or len(set(names)) != len(names):
@@ -144,13 +144,13 @@ def main():
         clr, clr_aligned, clr_error = score_phase(clr_phase, ct)
         reference = saved_metrics.loc[prefix]
         if len(ft) != reference.n_selected_probes or len(st) != reference.n_samples:
-            raise ValueError(f"Panel/sample counts differ from Figure 1 for {label}")
+            raise ValueError(f"Panel/sample counts differ from Figure 2 for {label}")
         if not np.allclose(
             [clr["R"], clr["mean_abs_err_h"]],
             [reference.phase_agreement_r, reference.mean_abs_phase_error_hours],
             rtol=1e-10, atol=1e-10,
         ):
-            raise ValueError(f"Common scoring does not reproduce Figure 1 metrics for {label}")
+            raise ValueError(f"Common scoring does not reproduce Figure 2 metrics for {label}")
         tissue_dir = OUT / "matrices" / label.replace(" ", "_")
         print(f"Fitting/scoring {label}: {len(ft)} matched probes, {len(st)} samples", flush=True)
         chiral_phase, iterations, metadata = run_chiral(matrix, tissue_dir, args.rescore_only)
@@ -199,8 +199,8 @@ def main():
         "R": "abs(mean(exp(1j * (aligned_phase - reference_phase))))",
         "error": "mean(abs(angle(exp(1j * (aligned_phase - reference_phase))))) * 24 / (2*pi)",
         "aggregation": "Unweighted arithmetic mean across the 12 tissues",
-        "scope": "Single CHIRAL seed 17 versus saved Figure 1 fits; no repeated-initialization robustness claim",
-        "selection": "Exact Figure 1 probes, selected upstream using collection-time harmonic scores; no reselection or gene-symbol deduplication",
+        "scope": "Single CHIRAL seed 17 versus saved Figure 2 fits; no repeated-initialization robustness claim",
+        "selection": "Exact Figure 2 probes, selected upstream using collection-time harmonic scores; no reselection or gene-symbol deduplication",
         "preprocessing": "Same positive expression entries: log2 for CHIRAL, native centered log-ratio transform for clrcycle",
         "tissues": audits,
     }

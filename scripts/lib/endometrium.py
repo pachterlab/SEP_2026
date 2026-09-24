@@ -322,7 +322,7 @@ def add_oriented(z, p):
 
 
 def training_ellipse_table(training, orientation, stage_centers):
-    """Describe only the training ellipse displayed in Figure 3 A and C."""
+    """Describe only the training ellipse displayed in Figure 4 A and C."""
     model = clrcycle.circular_agreement(training.raw_angle, training.model_cycle_time, period=100)
     coordinates = training[["raw_cosine", "raw_sine", "raw_angle"]].rename(columns={
         "raw_cosine": "clrcycle_cosine", "raw_sine": "clrcycle_sine", "raw_angle": "clrcycle_angle"})
@@ -549,7 +549,7 @@ def run_shared_analysis():
         c1_z.canonical_phase_compatible.mean()
     )
 
-    # Stage 6: write the complete numerical audit trail used by Figure 3.
+    # Stage 6: write the complete numerical audit trail used by Figure 4.
     training_ellipse_table(train_z, p, ctr).to_csv(
         DIRS["tables"] / "training_ellipse_geometry.csv", index=False)
     for platform, z in (

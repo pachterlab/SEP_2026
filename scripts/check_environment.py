@@ -1,16 +1,43 @@
 #!/usr/bin/env python3
-"""Check the Python/R dependencies without using the system R installation."""
+"""Check Python/R dependencies and real LaTeX figure rendering."""
 
 import importlib
 from pathlib import Path
 import shutil
 import sys
+import subprocess
 from tempfile import TemporaryDirectory
+
+
+def check_latex():
+    """Verify the external TeX tools and fonts used by the methods figure."""
+    # Use the same user-local dvipng fallback as the figure script, if needed.
+    import fig1_architecture
+    for name in ("latex", "dvipng", "kpsewhich"):
+        executable = shutil.which(name)
+        if executable is None:
+            raise RuntimeError(
+                f"Missing {name}. On Debian/Ubuntu run make system-deps; "
+                "on other systems install the TeX dependencies listed in README.md."
+            )
+        print(f"{name}: {executable}", flush=True)
+    for filename in ("type1cm.sty", "type1ec.sty"):
+        found = subprocess.run(["kpsewhich", filename], capture_output=True, text=True)
+        if found.returncode or not found.stdout.strip():
+            raise RuntimeError(
+                f"Missing {filename}. Install the complete LaTeX dependencies "
+                "with make system-deps (Debian/Ubuntu); see README.md."
+            )
+        print(f"{filename}: {found.stdout.strip()}", flush=True)
 
 
 def main():
     import matplotlib
     matplotlib.use("Agg")
+    check_latex()
+    from lib.figure_style import figure_font, font_rcparams
+    matplotlib.rcParams.update(font_rcparams())
+    print(f"Figure font: {figure_font()}", flush=True)
     for name in ("numpy", "pandas", "scipy", "sklearn", "matplotlib", "PIL",
                  "openpyxl", "umap", "elpigraph", "clrcycle"):
         module = importlib.import_module(name)
@@ -50,11 +77,15 @@ def main():
         assert loaded.active["B1"].value == 1
         loaded.close()
         fig, ax = plt.subplots()
-        ax.plot([0, 1], [0, 1])
+        # Exercise the actual methods-panel formulas and the external TeX
+        # renderer, rather than merely exporting a figure containing no math.
+        from fig1_architecture import draw_projection, workflow_values
+        values = workflow_values()
+        draw_projection(ax, values["display_order"], values["projected"])
         for suffix in ("pdf", "svg", "png"):
             fig.savefig(path / f"check.{suffix}")
         plt.close(fig)
-    print("Environment checks passed: R, CHIRAL, Excel, and figure export.")
+    print("Environment checks passed: R, CHIRAL, Excel, and LaTeX PDF/SVG/PNG export.")
 
 
 if __name__ == "__main__":

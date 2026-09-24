@@ -1,9 +1,9 @@
-"""Reproduce Figure 2: FUCCI projection and embedding benchmark.
+"""Reproduce Figure 3: FUCCI projection and embedding benchmark.
 
 The numerical workflow extracts published FUCCI metadata with R, fits clrcycle
 to the published top-100 panel, and evaluates alternative two-dimensional
 embeddings. Numerical tables are always written under ``results/fig2/``;
-passing ``--plot`` additionally writes ``figures/Figure2.{pdf,svg,png}``.
+passing ``--plot`` additionally writes ``figures/Figure3.{pdf,svg,png}``.
 """
 
 from pathlib import Path
@@ -14,6 +14,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from lib.figure_style import font_rcparams
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 import numpy as np
 import pandas as pd
@@ -93,7 +94,7 @@ GENE_SIZE = 10.5
 METRIC_SIZE = 11
 plt.rcParams.update(
     {
-        "font.family": "DejaVu Sans",
+        **font_rcparams(),
         "font.size": BASE_SIZE,
         "axes.titlesize": TITLE_SIZE,
         "axes.titleweight": "bold",
@@ -186,7 +187,7 @@ cell_ax.axhline(0, color=".85", lw=0.6)
 cell_ax.axvline(0, color=".85", lw=0.6)
 cell_ax.set_aspect("equal", adjustable="datalim")
 cell_ax.set_box_aspect(1)
-cell_ax.set(xlabel="clrcycle cosine coordinate", ylabel="clrcycle sine coordinate")
+cell_ax.set(xlabel="First Fourier cosine coordinate ($u$)", ylabel="First Fourier sine coordinate ($v$)")
 cell_ax.set_title("FUCCI cells projected by clrcycle", y=1.10, pad=0)
 cell_ax.text(
     0.5,
@@ -235,14 +236,26 @@ _label_table = order.loc[
 ]
 _label_rows = list(_label_table.itertuples())
 _label_rows.sort(key=lambda row: float(row.clrcycle_angle_aligned) % TWO_PI)
+# Spread the crowded labels without moving their gene-circle coordinates.
+_label_angle_offsets = {
+    "CENPF": -6, "KPNA2": 2, "CKS2": 7,
+    "HIST1H4E": -4, "HIST1H4C": 4,
+    "UBC": -3, "CDK1": 4,
+}
 for _idx, row in enumerate(_label_rows):
     a = float(row.clrcycle_angle_aligned)
-    deg = np.degrees(a) % 360
+    label_angle = a + np.deg2rad(_label_angle_offsets.get(row.gene, 0))
+    deg = np.degrees(label_angle) % 360
     radius = 1.10 + 0.105 * (_idx % 3)
     flip = 90 < deg < 270
+    gene_ax.plot(
+        [1.02 * np.cos(a), (radius - 0.025) * np.cos(label_angle)],
+        [1.02 * np.sin(a), (radius - 0.025) * np.sin(label_angle)],
+        color=".65", lw=0.5, zorder=2, clip_on=False,
+    )
     gene_ax.text(
-        radius * np.cos(a),
-        radius * np.sin(a),
+        radius * np.cos(label_angle),
+        radius * np.sin(label_angle),
         row.gene,
         fontsize=GENE_SIZE,
         fontweight="bold" if row.gene in {"DIABLO", "CDC6", "TNPO1"} else "normal",
@@ -370,7 +383,7 @@ for x in b:
     cb.ax.axvline(x, color="black", lw=0.7, alpha=0.55)
 for ext in ("pdf", "svg", "png"):
     fig.savefig(
-        ROOT / "figures" / f"Figure2.{ext}",
+        ROOT / "figures" / f"Figure3.{ext}",
         dpi=300 if ext == "png" else None,
         bbox_inches="tight",
     )

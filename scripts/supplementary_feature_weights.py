@@ -12,6 +12,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from lib.figure_style import font_rcparams
 import numpy as np
 import pandas as pd
 
@@ -197,7 +198,7 @@ def liver_figure():
         for symbol, probe in zip(symbols, selected_order.ID_REF)
     ]
     plt.rcParams.update(
-        {"font.family": "DejaVu Sans", "pdf.fonttype": 42, "svg.fonttype": "none"}
+        {**font_rcparams(), "pdf.fonttype": 42, "svg.fonttype": "none"}
     )
     fig, ax = plt.subplots(figsize=(5.2, 9), constrained_layout=True)
     image = ax.imshow(
@@ -234,14 +235,14 @@ def collate_ellipses():
     """Collect all plotted clrcycle cohorts and their vertex interpretations."""
     circadian = pd.read_csv(ROOT / "results/fig1/all_tissues/ellipse_geometry.csv", float_precision="round_trip")
     circadian = circadian.assign(dataset="Circadian", fit_id=circadian.tissue,
-                                metadata_reference="CT", figure_panel="Figure1 tissue panels")
+                                metadata_reference="CT", figure_panel="Figure2 tissue panels")
     liver = pd.read_csv(ROOT / "results/fig1/liver/ellipse_geometry.csv", float_precision="round_trip").assign(
-        dataset="Circadian", fit_id="Liv_liver_panel", metadata_reference="CT", figure_panel="Figure1 A")
+        dataset="Circadian", fit_id="Liv_liver_panel", metadata_reference="CT", figure_panel="Figure2 A")
     fucci = pd.read_csv(ROOT / "results/fig2/ellipse_geometry.csv", float_precision="round_trip").assign(
-        dataset="FUCCI", fit_id="GSE121265", metadata_reference="FUCCI phase", figure_panel="Figure2 B")
+        dataset="FUCCI", fit_id="GSE121265", metadata_reference="FUCCI phase", figure_panel="Figure3 B")
     endometrium = pd.read_csv(ROOT / "results/fig3/training_ellipse_geometry.csv", float_precision="round_trip")
     endometrium = endometrium.assign(dataset="Endometrium", fit_id=endometrium.cohort,
-                                   figure_panel="Figure3")
+                                   figure_panel="Figure4")
     geometry = pd.concat([circadian, liver, fucci, endometrium], ignore_index=True)
     geometry["significant_anisotropy"] = geometry.anisotropy_pvalue.lt(.05)
     phase_columns = [c for c in geometry if c.startswith("major_vertex_")

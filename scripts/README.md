@@ -6,6 +6,7 @@ clrcycle paper. Run commands from the repository root after activating the
 
 ```bash
 cd /path/to/SEP_2026
+make system-deps  # Debian/Ubuntu; see the root README for other systems
 make environment
 conda activate sep_2026
 make check-env
@@ -16,13 +17,13 @@ make check-env
 | Order | Command | Purpose | Main outputs |
 |---:|---|---|---|
 | 1 | `python scripts/download_data.py` | Download public source data and write provenance records | `data/raw/`, `data/processed/download_manifest.json` |
-| 2 | `python scripts/methods_figure.py` | Render the conceptual clrcycle workflow | `figures/Methods_Figure.*` |
-| 3 | `python scripts/fig1_circadian.py` | Analyze GSE54650 circadian tissues and render Figure 1 | `results/fig1/`, `figures/Figure1.*` |
-| 4 | `python scripts/fig2_fucci.py --plot` | Analyze GSE121265 FUCCI cells, benchmark embeddings, and render Figure 2 | `results/fig2/`, `figures/Figure2.*` |
-| 5 | `python scripts/fig3_endometrium.py` | Run endometrium discovery/transfer analysis and render Figure 3 | `results/fig3/`, `figures/Figure3.*` |
+| 2 | `python scripts/fig1_architecture.py` | Render the clrcycle architecture with LaTeX math | `figures/Figure1.*` |
+| 3 | `python scripts/fig2_circadian.py` | Analyze GSE54650 circadian tissues and render Figure 2 | `results/fig1/`, `figures/Figure2.*` |
+| 4 | `python scripts/fig3_fucci.py --plot` | Analyze GSE121265 FUCCI cells, benchmark embeddings, and render Figure 3 | `results/fig2/`, `figures/Figure3.*` |
+| 5 | `python scripts/fig4_endometrium.py` | Run endometrium discovery/transfer analysis and render Figure 4 | `results/fig3/`, `figures/Figure4.*` |
 | 6 | `python scripts/supplementary_feature_weights.py` | Collate native feature weights and render the liver CT10 heatmap | `results/supp_fig1/`, `results/supplementary_data/`, `figures/supp_fig1_liver_CT10_feature_weights.*` |
 | 7 | `python scripts/supplementary_figure2_benchmarks.py --plot` | Benchmark circular ordering and harmonic distortion | `results/supp_fig2/`, `figures/supp_fig2_ordering_benchmarks.*` |
-| 8 | `python scripts/supplementary_chiral_comparison.py` | Benchmark CHIRAL on the exact current Figure 1 probe panels using shared R and error scoring | `results/chiral_comparison/` |
+| 8 | `python scripts/supplementary_chiral_comparison.py` | Benchmark CHIRAL on the exact current Figure 2 probe panels using shared R and error scoring | `results/chiral_comparison/` |
 | 9 | `python scripts/supplementary_workbooks.py` | Package saved results into four Excel workbooks | `results/supplementary_data/Supplementary_Data_*.xlsx` |
 
 `make all` downloads inputs and runs the main and supplementary figure workflow
@@ -88,7 +89,7 @@ Endometrium ellipses are computed only for the training projection in panels A a
 Held-out and transfer panels have no ellipse fits. Anisotropy p-values use
 1,000 radius-preserving random-angle draws with seed 17, without multiplicity
 adjustment; leave-one-out columns report robustness, not significance.
-Figure 3's gene-circle annotations are generated from training expression and
+Figure 4's gene-circle annotations are generated from training expression and
 histology after the gene order is frozen; no cached annotation table is required.
 
 Each analysis follows the same broad sequence:
@@ -102,6 +103,11 @@ Each analysis follows the same broad sequence:
 
 ## Inputs and generated files
 
+Main figure scripts and exports use numbers 1–4 (architecture, circadian,
+FUCCI, endometrium). Numerical results retain their historical directories:
+`results/fig1/` is circadian, `results/fig2/` is FUCCI, and `results/fig3/` is
+endometrium. Supplementary figure numbering is unchanged.
+
 Downloaded source files belong under `data/raw/<accession>/`. Reusable prepared
 tables belong under `data/processed/`. Numerical analysis artifacts are written
 under `results/<figure>/`, while final figures are written under `figures/`.
@@ -112,10 +118,10 @@ depend on the shell's current working directory. They never modify files under
 
 ## Fast reruns
 
-- `python scripts/fig1_circadian.py --plot-only` redraws Figure 1 from existing
+- `python scripts/fig2_circadian.py --plot-only` redraws Figure 2 from existing
   result tables without refitting.
-- `python scripts/fig2_fucci.py` runs the numerical analysis and prints the
-  benchmark table; add `--plot` to render Figure 2.
+- `python scripts/fig3_fucci.py` runs the numerical analysis and prints the
+  benchmark table; add `--plot` to render Figure 3.
 - `python scripts/supplementary_figure2_benchmarks.py` writes numerical
   benchmark outputs; add `--plot` to render the supplementary figure.
 - `python scripts/supplementary_feature_weights.py` collates the native
@@ -128,6 +134,9 @@ numerical artifacts.
 
 ## Reproducibility notes
 
+- Non-math text requires genuine Helvetica through `lib.figure_style`. Install
+  it on the system or supply font files in `fonts/Helvetica/` (see
+  `fonts/README.md`). Font substitution is disabled; equation rendering is unchanged.
 - Stochastic routines use fixed seeds defined in the relevant analysis module.
 - Feature selection and any post-fit alignment are documented separately in
   the code because they answer different scientific questions.
@@ -140,9 +149,15 @@ numerical artifacts.
   R 3.6.3 and reference BLAS/LAPACK match the original CHIRAL runtime; Python
   3.11.8 is pinned for compatibility with those libraries.
   `make check-env` checks imports, the environment-local R packages, a small
-  CHIRAL fit, and Excel/PDF/SVG/PNG export. It rejects a fallback to system R.
+  CHIRAL fit, Excel export, and the actual methods projection panel rendered
+  through LaTeX to PDF/SVG/PNG. It rejects a fallback to system R.
+- LaTeX is required for the methods figure. `make system-deps` installs the
+  Debian/Ubuntu packages listed in `system-requirements.txt`, including
+  `dvipng`, CM-Super fonts, and the extra LaTeX packages. Other platforms need
+  equivalent tools on `PATH`; see the root README. The Conda environment check
+  reports missing tools/fonts before checking the remaining dependencies.
 - The optional combined supplement-document builder and its outputs are ignored
-  and excluded from Make targets. No LaTeX installation is needed.
+  and excluded from Make targets.
 - The public-data downloader records file sizes and SHA-256 checksums in
   `data/processed/download_manifest.json`.
 

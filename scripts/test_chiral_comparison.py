@@ -1,4 +1,4 @@
-"""Checks for shared circular scoring and exact Figure 1 input matching."""
+"""Checks for shared circular scoring and exact Figure 2 input matching."""
 
 import unittest
 

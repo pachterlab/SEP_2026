@@ -1,4 +1,4 @@
-"""Reproduce Figure 1: circadian structure across GSE54650 tissues.
+"""Reproduce Figure 2: circadian structure across GSE54650 tissues.
 
 Inputs
 ------
@@ -8,7 +8,7 @@ Inputs
 Outputs
 -------
 Numerical tables under ``results/fig1/`` and
-``figures/Figure1.{pdf,svg,png}``. Use ``--plot-only`` to redraw the figure
+``figures/Figure2.{pdf,svg,png}``. Use ``--plot-only`` to redraw the figure
 from existing numerical results without repeating the analysis.
 """
 
@@ -19,6 +19,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from lib.figure_style import font_rcparams
 import numpy as np
 import pandas as pd
 from matplotlib.colors import LinearSegmentedColormap
@@ -128,10 +129,14 @@ def gene_circle(ax, features, cmap):
         x, y = 3.18 * np.cos(angle), 3.18 * np.sin(angle)
         dx, dy = offsets.get(row.gene_symbol, (0, 0))
         example = row.gene_symbol.lower() in {"dbp", "rorc", "clock"}
-        ax.text(
-            x + scale * dx,
-            y + scale * dy,
+        ax.annotate(
             row.gene_symbol,
+            xy=(scale * np.cos(angle), scale * np.sin(angle)),
+            xytext=(x + scale * dx, y + scale * dy),
+            textcoords="data",
+            arrowprops=dict(arrowstyle="-", color=".65", lw=0.5,
+                            shrinkA=1, shrinkB=2),
+            annotation_clip=False,
             fontsize=14,
             fontweight="bold" if example else "normal",
             ha="left" if x >= 0 else "right",
@@ -213,8 +218,8 @@ def harmonic_panel(ax, samples, expression, gene, cmap, compact=False):
     ax.spines[["top", "right"]].set_visible(False)
 
 
-def render_figure1(expression):
-    """Assemble Figure 1 from validated result tables and expression data."""
+def render_figure2(expression):
+    """Assemble Figure 2 from validated result tables and expression data."""
     liver = ROOT / "results/fig1/liver"
     allout = ROOT / "results/fig1/all_tissues"
     samples = pd.read_csv(liver / "liver_clr_acs_sample_coordinates.csv")
@@ -228,7 +233,7 @@ def render_figure1(expression):
     PANEL_SIZE = 21
     plt.rcParams.update(
         {
-            "font.family": "DejaVu Sans",
+            **font_rcparams(),
             "font.size": BASE_SIZE,
             "axes.titlesize": TITLE_SIZE,
             "axes.titleweight": "bold",
@@ -267,8 +272,8 @@ def render_figure1(expression):
     sc = sample_projection(ax, samples, cmap, True, metrics)
     ax.set(
         title=rf"Liver samples ($\boldsymbol{{\rho}}_{{\mathbf{{clrcycle}}}}$={metrics.rho_clrcycle:.3f}, R={metrics.phase_agreement_r:.3f})",
-        xlabel="ACS cosine coordinate",
-        ylabel="ACS sine coordinate",
+        xlabel="First Fourier cosine coordinate ($u$)",
+        ylabel="First Fourier sine coordinate ($v$)",
     )
     ax.text(
         -0.10,
@@ -348,8 +353,8 @@ def render_figure1(expression):
         grid_axes.append(axis)
         subset = pooled[pooled.tissue == row.tissue]
         sc2 = sample_projection(axis, subset, cmap, False, row)
-        axis.set_xlabel("ACS cosine", fontsize=11)
-        axis.set_ylabel("ACS sine", fontsize=11)
+        axis.set_xlabel("First Fourier cosine coordinate ($u$)", fontsize=11)
+        axis.set_ylabel("First Fourier sine coordinate ($v$)", fontsize=11)
         axis.tick_params(labelsize=10)
         axis.set_title(
             f"{row.label}\n"
@@ -374,14 +379,14 @@ def render_figure1(expression):
 
     FIG = ROOT / "figures"
     FIG.mkdir(exist_ok=True)
-    fig.savefig(FIG / "Figure1.pdf", bbox_inches="tight")
-    fig.savefig(FIG / "Figure1.svg", bbox_inches="tight")
-    fig.savefig(FIG / "Figure1.png", dpi=300, bbox_inches="tight")
+    fig.savefig(FIG / "Figure2.pdf", bbox_inches="tight")
+    fig.savefig(FIG / "Figure2.svg", bbox_inches="tight")
+    fig.savefig(FIG / "Figure2.png", dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 
 def main():
-    """Run the circadian analysis or redraw Figure 1 from saved results."""
+    """Run the circadian analysis or redraw Figure 2 from saved results."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--plot-only",
@@ -390,8 +395,8 @@ def main():
     )
     args = parser.parse_args()
     if args.plot_only:
-        render_figure1(read_matrix(RAW / "GSE54650_series_matrix.txt.gz"))
-        print("Wrote Figure1 PDF/SVG/PNG from validated outputs")
+        render_figure2(read_matrix(RAW / "GSE54650_series_matrix.txt.gz"))
+        print("Wrote Figure2 PDF/SVG/PNG from validated outputs")
         return
     OUT.mkdir(parents=True, exist_ok=True)
     expression = read_matrix(RAW / "GSE54650_series_matrix.txt.gz")
@@ -445,7 +450,7 @@ def main():
     pd.concat([atlas_geometry, liver_geometry], ignore_index=True).to_csv(
         ROOT / "results/fig1/ellipse_geometry.csv", index=False
     )
-    render_figure1(expression)
+    render_figure2(expression)
     print(table[["tissue", "rho_clrcycle", "phase_agreement_r", "major_semiaxis",
                  "minor_semiaxis", "axis_ratio", "anisotropy_pvalue"]].to_string(index=False))
 

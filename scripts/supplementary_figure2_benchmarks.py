@@ -1,6 +1,6 @@
 """Reproduce Supplementary Figure 2: circular-ordering benchmarks.
 
-This downstream analysis reads validated Figure 3 artifacts, compares the
+This downstream analysis reads validated Figure 4 artifacts, compares the
 clrcycle order with an ElPiGraph cycle, and measures harmonic distortion across
 linear, Fourier, and cyclic-spline models. Tables are written to
 ``results/supp_fig2/``; ``--plot`` additionally renders the figure.
@@ -13,6 +13,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from lib.figure_style import font_rcparams
 from matplotlib.collections import LineCollection
 from matplotlib.colors import BoundaryNorm, ListedColormap
 import numpy as np
@@ -103,7 +104,7 @@ def circular_ranks(phase):
 
 
 def load_shared():
-    """Load and validate the Figure 3 artifacts required by this benchmark."""
+    """Load and validate the Figure 4 artifacts required by this benchmark."""
     paths = [
         SHARED / "training_selected_counts.csv.gz",
         SHARED / "rnaseq_train_sample_coordinates.csv",
@@ -113,7 +114,7 @@ def load_shared():
     missing = [str(x) for x in paths if not x.exists()]
     if missing:
         raise FileNotFoundError(
-            "Missing validated Figure 3 outputs:\n" + "\n".join(missing)
+            "Missing validated Figure 4 outputs:\n" + "\n".join(missing)
         )
     counts = pd.read_csv(paths[0], index_col=0)
     samples = pd.read_csv(paths[1])
@@ -304,7 +305,7 @@ def plot(clr, ordering, summary, metrics, peak, clrrank, graph, projected, error
     METRIC_SIZE = 19
     plt.rcParams.update(
         {
-            "font.family": "DejaVu Sans",
+            **font_rcparams(),
             "font.size": BASE_SIZE,
             "axes.titlesize": TITLE_SIZE,
             "axes.titleweight": "bold",

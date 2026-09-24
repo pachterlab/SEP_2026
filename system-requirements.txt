@@ -1,0 +1,6 @@
+texlive-latex-base
+texlive-latex-recommended
+texlive-latex-extra
+cm-super
+dvipng
+ghostscript

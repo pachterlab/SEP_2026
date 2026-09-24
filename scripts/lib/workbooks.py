@@ -150,7 +150,7 @@ def write_chiral_workbook(path, source):
     ])
     pd.testing.assert_frame_equal(summary, pd.read_csv(source / "summary.csv"))
     methods = pd.DataFrame([
-        ("Dataset", "GSE54650; current Figure 1 circadian tissue panels."),
+        ("Dataset", "GSE54650; current Figure 2 circadian tissue panels."),
         ("Panel selection", audit["selection"]),
         ("Preprocessing", audit["preprocessing"]),
         ("Alignment", audit["alignment"]),

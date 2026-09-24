@@ -15,6 +15,7 @@ from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from .figure_style import font_rcparams
 import numpy as np
 import pandas as pd
 
@@ -54,7 +55,7 @@ def set_style() -> None:
     """Apply the compact Matplotlib style shared by manuscript figures."""
     mpl.rcParams.update(
         {
-            "font.family": "DejaVu Sans",
+            **font_rcparams(),
             "font.size": 8,
             "axes.titlesize": 9,
             "axes.labelsize": 8,

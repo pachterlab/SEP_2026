@@ -8,21 +8,27 @@ This repository contains the data-processing, analysis, benchmarking, and figure
 
 | Output | Analysis | Script |
 |---|---|---|
-| Methods Figure | clrcycle workflow | `scripts/methods_figure.py` |
-| Figure 1 | Circadian atlas analysis | `scripts/fig1_circadian.py` |
-| Figure 2 | FUCCI cell-cycle analysis | `scripts/fig2_fucci.py` |
-| Figure 3 | Endometrium menstrual-cycle analysis | `scripts/fig3_endometrium.py` |
+| Figure 1 | clrcycle architecture | `scripts/fig1_architecture.py` |
+| Figure 2 | Circadian atlas analysis | `scripts/fig2_circadian.py` |
+| Figure 3 | FUCCI cell-cycle analysis | `scripts/fig3_fucci.py` |
+| Figure 4 | Endometrium menstrual-cycle analysis | `scripts/fig4_endometrium.py` |
 | Supplementary Figure 1 | Liver CT10 native feature-weight decomposition | `scripts/supplementary_feature_weights.py` |
 | Supplementary Figure 2 | Circular-ordering and harmonic-distortion benchmarks | `scripts/supplementary_figure2_benchmarks.py` |
 
+Main figure numbering is: 1 architecture, 2 circadian, 3 FUCCI, and 4 endometrium.
+Script names match the current figure numbers. The existing numerical directories
+`results/fig1/`–`results/fig3/` retain their historical names for circadian, FUCCI,
+and endometrium results, respectively, to preserve saved analysis inputs.
+Supplementary figures retain their existing numbering.
+
 Figures are written to `figures/` as PDF, SVG, and 300-dpi PNG files. Numerical outputs are written to the corresponding directory under `results/`.
 
-`scripts/supplementary_chiral_comparison.py` is a standalone benchmark (not part of `make figures`/`make all`): it fits CHIRAL (Naef lab) on the exact 240-probe panels and samples from the current Figure 1 (`results/fig1/all_tissues/`), without gene-symbol deduplication. It verifies that the shared expression entries reconstruct the saved clrcycle coordinates, then scores both methods with Figure 1's phase-resultant R and mean absolute phase error in hours using the same rotation/reflection alignment. The project environment setup installs its pinned CHIRAL R package. Output: `results/chiral_comparison/`.
+`scripts/supplementary_chiral_comparison.py` is a standalone benchmark (not part of `make figures`/`make all`): it fits CHIRAL (Naef lab) on the exact 240-probe panels and samples from the current Figure 2 (`results/fig1/all_tissues/`), without gene-symbol deduplication. It verifies that the shared expression entries reconstruct the saved clrcycle coordinates, then scores both methods with Figure 2's phase-resultant R and mean absolute phase error in hours using the same rotation/reflection alignment. The project environment setup installs its pinned CHIRAL R package. Output: `results/chiral_comparison/`.
 
 The comparison replaces the earlier 96-gene benchmark, which used different R
 definitions for the two methods. Raw and aligned phases and input fingerprints
 are saved for audit; `--rescore-only` reuses saved CHIRAL phases with matching
-inputs. Figure 1's probe selection uses collection times, so this comparison is
+inputs. Figure 2's probe selection uses collection times, so this comparison is
 conditional on those selected panels. A single CHIRAL seed is evaluated; the
 table does not establish robustness to initialization or a failure mechanism.
 
@@ -63,6 +69,7 @@ each analysis.
 ```bash
 git clone <repository-url>
 cd SEP_2026
+make system-deps  # Debian/Ubuntu: install the LaTeX tools and fonts
 make environment
 conda activate sep_2026
 make check-env
@@ -74,8 +81,25 @@ folder is required. R 3.6.3 and reference BLAS/LAPACK preserve the original
 CHIRAL calculation; Python 3.11.8 permits these libraries in one environment.
 `make environment` also updates an existing environment.
 Use `make environment ENV_NAME=another_name` for a separate installation.
-The optional combined supplement-document builder is local and ignored;
-LaTeX is not required. Individual figure PDFs are still generated.
+The methods figure uses actual LaTeX for its mathematical labels. System
+requirements are recorded in `system-requirements.txt`; `make system-deps`
+installs them on Debian/Ubuntu (administrator access is required). Other
+systems need a TeX Live/MacTeX installation providing `latex`, `kpsewhich`,
+`type1cm.sty`, and `type1ec.sty` (CM-Super fonts), plus `dvipng` and Ghostscript
+on `PATH`. Non-math figure text requires genuine Helvetica. Install it on your
+system or place your Helvetica TTF/OTF files in `fonts/Helvetica/`; see
+[`fonts/README.md`](fonts/README.md). Font files are supplied separately from
+Conda. The scripts report an error if Helvetica is missing; no Nimbus Sans,
+Arial, or DejaVu substitution is permitted. These are external tools, so installing the Conda YAML alone is
+not sufficient. `make check-env` verifies the tools and fonts and exports the
+actual methods projection panel to PDF, SVG, and PNG using LaTeX.
+The optional combined supplement-document builder remains local and ignored.
+
+All current presentation changes are implemented in the tracked figure scripts:
+consistent first Fourier coordinate labels with `(u)` and `(v)`, gene guide
+lines in Figures 1 and 2, separated projection formulas, and the
+“clrcycle architecture” title. The standard commands below regenerate them;
+no temporary rendering scripts or manual image edits are required.
 
 ## Download and prepare data
 
@@ -102,17 +126,17 @@ make all
 ## Reproduce individual figures
 
 ```bash
-# Methods Figure: clrcycle workflow
-python scripts/methods_figure.py
+# Figure 1: clrcycle architecture
+python scripts/fig1_architecture.py
 
-# Figure 1: circadian atlas
-python scripts/fig1_circadian.py
+# Figure 2: circadian atlas
+python scripts/fig2_circadian.py
 
-# Figure 2: FUCCI cell cycle
-python scripts/fig2_fucci.py --plot
+# Figure 3: FUCCI cell cycle
+python scripts/fig3_fucci.py --plot
 
-# Figure 3: endometrium menstrual cycle
-python scripts/fig3_endometrium.py
+# Figure 4: endometrium menstrual cycle
+python scripts/fig4_endometrium.py
 
 # Supplementary Figure 1 and collated feature-weight data
 python scripts/supplementary_feature_weights.py
@@ -120,7 +144,7 @@ python scripts/supplementary_feature_weights.py
 # Supplementary Figure 2: ordering and distortion benchmarks
 python scripts/supplementary_figure2_benchmarks.py --plot
 
-# Optional: benchmark clrcycle against CHIRAL on the Figure 1 gene panels
+# Optional: benchmark clrcycle against CHIRAL on the Figure 2 gene panels
 python scripts/supplementary_chiral_comparison.py
 ```
 
@@ -142,10 +166,10 @@ Use `--workbooks 4` to rebuild only workbook 4 or `--out-dir PATH` to export els
 Missing inputs are reported before any workbook is written. `make figures` and
 `make all` generate analyses and figures; workbook export is a separate step.
 
-Figure 1 can also be redrawn from existing numerical results without rerunning its analysis:
+Figure 2 can also be redrawn from existing numerical results without rerunning its analysis:
 
 ```bash
-python scripts/fig1_circadian.py --plot-only
+python scripts/fig2_circadian.py --plot-only
 ```
 
 ## Repository structure
@@ -167,10 +191,10 @@ SEP_2026/
 │   └── chiral_comparison/   # CHIRAL vs clrcycle benchmark
 ├── scripts/
 │   ├── lib/                 # shared analysis functions
-│   ├── methods_figure.py
-│   ├── fig1_circadian.py
-│   ├── fig2_fucci.py
-│   ├── fig3_endometrium.py
+│   ├── fig1_architecture.py
+│   ├── fig2_circadian.py
+│   ├── fig3_fucci.py
+│   ├── fig4_endometrium.py
 │   ├── supplementary_feature_weights.py
 │   ├── supplementary_figure2_benchmarks.py
 │   ├── supplementary_chiral_comparison.py

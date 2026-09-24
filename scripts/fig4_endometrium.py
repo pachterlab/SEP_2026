@@ -1,10 +1,10 @@
-"""Reproduce Figure 3: endometrium discovery and frozen transfer.
+"""Reproduce Figure 4: endometrium discovery and frozen transfer.
 
 The analysis learns a cycle from GSE234354 bulk RNA-seq, then transfers that
 fixed geometry to GSE111976 C1 and 10x donor pseudobulks. Inputs are raw counts,
 source annotations, the Ensembl 91 GTF, and the platform files under
 ``data/raw/``. Outputs are written under ``results/fig3/`` and
-``figures/Figure3.{pdf,svg,png}``.
+``figures/Figure4.{pdf,svg,png}``.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from lib.figure_style import font_rcparams
 from matplotlib.colors import BoundaryNorm, ListedColormap, LinearSegmentedColormap
 from matplotlib.lines import Line2D
 
@@ -55,7 +56,7 @@ def render_figures() -> None:
     METRIC_SIZE = 16
     plt.rcParams.update(
         {
-            "font.family": "DejaVu Sans",
+            **font_rcparams(),
             "font.size": BASE_SIZE,
             "axes.titlesize": TITLE_SIZE,
             "axes.titleweight": "bold",
@@ -114,7 +115,7 @@ def render_figures() -> None:
         ax.axhline(0, color=".85", lw=0.5)
         ax.axvline(0, color=".85", lw=0.5)
         ax.set_aspect("equal", adjustable="box")
-        ax.set(xlabel="first-Fourier cosine", ylabel="first-Fourier sine", title=title)
+        ax.set(xlabel="First Fourier cosine coordinate ($u$)", ylabel="First Fourier sine coordinate ($v$)", title=title)
         ax.text(
             -0.10,
             1.34,
@@ -180,7 +181,7 @@ def render_figures() -> None:
     highlighted = genes.highlighted_top20_training_variance.astype(bool).to_numpy()
     _gene_labels = list(zip(genes.loc[highlighted, "gene"], angle[highlighted]))
     # Place labels in collision-free columns and connect them to their circle
-    # positions; this keeps all 20 names readable at the Figure 3 font scale.
+    # positions; this keeps all 20 names readable at the Figure 4 font scale.
     for _side in (-1, 1):
         _side_labels = [
             item for item in _gene_labels if np.sign(np.cos(item[1])) == _side
@@ -301,8 +302,8 @@ def render_figures() -> None:
         ax.set_aspect("equal", adjustable="box")
         ax.set_xlim(-limit, limit)
         ax.set_ylim(-limit, limit)
-        ax.set_xlabel("Frozen first-Fourier cosine")
-        ax.set_ylabel("Frozen first-Fourier sine")
+        ax.set_xlabel("First Fourier cosine coordinate ($u$)")
+        ax.set_ylabel("First Fourier sine coordinate ($v$)")
         ax.legend(
             handles=[
                 Line2D(
@@ -375,7 +376,7 @@ def render_figures() -> None:
     )
     for suffix in ("png", "svg", "pdf"):
         fig.savefig(
-            target / f"Figure3.{suffix}",
+            target / f"Figure4.{suffix}",
             dpi=300 if suffix == "png" else None,
             bbox_inches="tight",
         )
@@ -383,7 +384,7 @@ def render_figures() -> None:
 
 
 def main() -> None:
-    """Run the shared analysis, copy its audit tables, and render Figure 3."""
+    """Run the shared analysis, copy its audit tables, and render Figure 4."""
     endometrium.run_shared_analysis()
     render_figures()
     write_versions(ROOT / "results/fig3/software_versions.json")
