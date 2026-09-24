@@ -121,12 +121,12 @@ outer = fig.add_gridspec(
     top=0.88,
     bottom=0.19,
 )
-fig.suptitle(
+main_title = fig.suptitle(
     "FUCCI cell cycle projection, learned feature geometry (GSE121265), and cell embedding benchmark",
     fontsize=PANEL_SIZE,
     fontweight="bold",
-    x=0.055,
-    ha="left",
+    x=0.5,
+    ha="center",
     y=0.975,
 )
 left = outer[0].subgridspec(2, 1, height_ratios=(1.0, 0.42), hspace=0.36)
@@ -381,6 +381,13 @@ cb.set_label(
 )
 for x in b:
     cb.ax.axvline(x, color="black", lw=0.7, alpha=0.55)
+# Center the heading over the content retained by bbox_inches="tight".
+# The cropped content is not symmetric about the original figure canvas.
+main_title.set_in_layout(False)
+fig.canvas.draw()
+content_bbox = fig.get_tightbbox(fig.canvas.get_renderer())
+main_title.set_x((content_bbox.x0 + content_bbox.x1) / (2 * fig.get_figwidth()))
+main_title.set_in_layout(True)
 for ext in ("pdf", "svg", "png"):
     fig.savefig(
         ROOT / "figures" / f"Figure3.{ext}",
