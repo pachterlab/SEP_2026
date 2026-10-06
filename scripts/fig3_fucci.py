@@ -108,7 +108,7 @@ plt.rcParams.update(
 )
 
 # Build the manuscript figure only after all numerical artifacts are available.
-# A/B occupy the tall upper-left block; B is twice the width of A.  The three
+# A/B occupy the tall upper-left block with comparable widths.  The three
 # expression examples form a deliberately shallow, shared-y row underneath.
 fig = plt.figure(figsize=(18, 10.5), constrained_layout=False)
 outer = fig.add_gridspec(
@@ -121,16 +121,8 @@ outer = fig.add_gridspec(
     top=0.88,
     bottom=0.19,
 )
-main_title = fig.suptitle(
-    "FUCCI cell cycle projection, learned feature geometry (GSE121265), and cell embedding benchmark",
-    fontsize=PANEL_SIZE,
-    fontweight="bold",
-    x=0.5,
-    ha="center",
-    y=0.975,
-)
 left = outer[0].subgridspec(2, 1, height_ratios=(1.0, 0.42), hspace=0.36)
-top = left[0].subgridspec(1, 3, width_ratios=(1, 2, 0.06), wspace=0.34)
+top = left[0].subgridspec(1, 3, width_ratios=(1.4, 1.6, 0.06), wspace=0.30)
 gene_ax = fig.add_subplot(top[0, 0])
 cell_ax = fig.add_subplot(top[0, 1])
 examples = left[1].subgridspec(1, 4, width_ratios=(1, 1, 1, 0.40), wspace=0.10)
@@ -143,7 +135,7 @@ for i in range(3):
 
 def panel_label(ax, label, x=-0.10, y=1.04):
     """Place a bold manuscript panel label in axes-relative coordinates."""
-    ax.text(
+    return ax.text(
         x,
         y,
         label,
@@ -209,7 +201,7 @@ cell_ax.legend(
     edgecolor=".8",
     handlelength=2.0,
 )
-panel_label(cell_ax, "B", x=-0.08, y=1.08)
+label_b = panel_label(cell_ax, "B", x=-0.08, y=1.08)
 
 ga = order.clrcycle_angle_aligned.to_numpy(float)
 peaks = published_peak_phases()
@@ -229,7 +221,7 @@ gene_ax.set_aspect("equal")
 gene_ax.axis("off")
 # Keep the entire panel-A header above the radial gene labels.
 gene_ax.set_title("Learnt feature circle", y=1.14, pad=0)
-panel_label(gene_ax, "A", x=-0.10, y=1.12)
+label_a = panel_label(gene_ax, "A", x=-0.10, y=1.12)
 # Fewer, substantially larger labels are staggered radially to remain legible.
 _label_table = order.loc[
     (order["rank"] <= 15) | order.gene.isin({"DIABLO", "CDC6", "TNPO1"})
@@ -319,8 +311,11 @@ example_axes[0].set_ylim(_ymin - _ypad, _ymax + _ypad)
 right = outer[1].subgridspec(3, 1, hspace=0.62)
 metric = benchmark.set_index("method")
 method_order = ["PCA (2 PCs)", "UMAP (2D)", "Spectral embedding (2D)"]
+embedding_axes = []
+embedding_labels = []
 for k, name in enumerate(method_order):
     ax = fig.add_subplot(right[k, 0])
+    embedding_axes.append(ax)
     xy = embeddings[name]
     ax.scatter(
         xy[:, 0],
@@ -360,7 +355,10 @@ for k, name in enumerate(method_order):
         if name.startswith("PCA")
         else "UMAP2" if name.startswith("UMAP") else "Spectral 2"
     )
-    panel_label(ax, chr(ord("F") + k), x=-0.16, y=1.22)
+    label = panel_label(ax, chr(ord("F") + k), x=-0.16, y=1.22)
+    embedding_labels.append(label)
+    if k == 0:
+        label_f = label
 
 # Shared continuous legend with the biological labels used in the source figure.
 sm = plt.cm.ScalarMappable(norm=Normalize(0, TWO_PI), cmap=cmap)
@@ -381,13 +379,35 @@ cb.set_label(
 )
 for x in b:
     cb.ax.axvline(x, color="black", lw=0.7, alpha=0.55)
-# Center the heading over the content retained by bbox_inches="tight".
-# The cropped content is not symmetric about the original figure canvas.
-main_title.set_in_layout(False)
+
+# Align the top-row letters and the A/B headings across different panel sizes.
 fig.canvas.draw()
-content_bbox = fig.get_tightbbox(fig.canvas.get_renderer())
-main_title.set_x((content_bbox.x0 + content_bbox.x1) / (2 * fig.get_figwidth()))
-main_title.set_in_layout(True)
+renderer = fig.canvas.get_renderer()
+heading_top = max(axis.title.get_window_extent(renderer).y1 for axis in (gene_ax, cell_ax))
+for axis in (gene_ax, cell_ax):
+    center_x = axis.title.get_transform().transform(axis.title.get_position())[0]
+    axis.set_title(axis.title.get_text(), y=1.0)
+    axis.title.set_transform(fig.transFigure)
+    axis.title.set_position(fig.transFigure.inverted().transform((center_x, heading_top)))
+    axis.title.set_verticalalignment("top")
+labels = (label_a, label_b, label_f)
+label_top = max(label.get_window_extent(renderer).y1 for label in labels)
+for label in labels:
+    right_x = label.get_transform().transform(label.get_position())[0]
+    label.set_transform(fig.transFigure)
+    label.set_position(fig.transFigure.inverted().transform((right_x, label_top)))
+    label.set_verticalalignment("top")
+
+# Give G/H the same label-to-panel spacing as the aligned F label.
+first_panel_top = embedding_axes[0].get_window_extent(renderer).y1
+for axis, label in zip(embedding_axes[1:], embedding_labels[1:]):
+    right_x = label.get_transform().transform(label.get_position())[0]
+    panel_top = axis.get_window_extent(renderer).y1
+    aligned_top = label_top + panel_top - first_panel_top
+    label.set_transform(fig.transFigure)
+    label.set_position(fig.transFigure.inverted().transform((right_x, aligned_top)))
+    label.set_verticalalignment("top")
+
 for ext in ("pdf", "svg", "png"):
     fig.savefig(
         ROOT / "figures" / f"Figure3.{ext}",

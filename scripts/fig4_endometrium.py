@@ -368,12 +368,6 @@ def render_figures() -> None:
         title_fontsize=18,
         title="\nUnified histological-stage colors shared by A, B, and D–F",
     )
-    fig.suptitle(
-        "Menstrual cycle projection, learned feature geometry (GSE234354), "
-        "and stage prediction (GSE111976)",
-        fontsize=24,
-        fontweight="bold",
-    )
     for suffix in ("png", "svg", "pdf"):
         fig.savefig(
             target / f"Figure4.{suffix}",

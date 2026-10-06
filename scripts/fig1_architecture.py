@@ -124,6 +124,7 @@ def panel_title(
         f"{number}. {title}",
         transform=axis.transAxes,
         ha="center",
+        multialignment="center",
         va="bottom",
         fontsize=24,
         fontweight="bold",
@@ -247,7 +248,7 @@ def draw_expression_heatmap(axis: plt.Axes, values: dict[str, np.ndarray]) -> No
 
 def draw_covariance(axis: plt.Axes, covariance: np.ndarray, figure: plt.Figure) -> None:
     """Draw the CLR covariance matrix used by the ordering objective."""
-    panel_title(axis, 2, "Gene covariance", horizontal_position=0.38)
+    panel_title(axis, 2, "Gene covariance")
     matrix_axis = axis.inset_axes([0.02, 0.07, 0.80, 0.79])
     limit = np.abs(covariance).max()
     image = matrix_axis.imshow(covariance, cmap=GRAY_CMAP, vmin=-limit, vmax=limit)
@@ -537,7 +538,7 @@ def block_arrow(
         target_point = ((second.x0 + second.x1) / 2, second.y1)
         center = (
             (source_point[0] + target_point[0]) / 2,
-            (source_point[1] + target_point[1]) / 2 + 0.01,
+            (source_point[1] + target_point[1]) / 2 + 0.035,
         )
         width, height = figure.get_figwidth(), figure.get_figheight()
         direction = np.array(
@@ -654,14 +655,14 @@ def render_figure() -> None:
             [position.x0 + horizontal_shift, position.y0, position.width, position.height]
         )
 
-    # Center the heatmap and its colorbar within the top-left grid cell.
+    # Align the heatmap and its colorbar with the other top-row graphics.
     expression_panel = figure.add_subplot(grid[0, 0:4])
     expression_panel.axis("off")
     for axis in (expression_panel, axes[0]):
         position = axis.get_position()
         axis.set_position([position.x0 - 0.03, position.y0,
                            position.width, position.height])
-    heatmap_axis = expression_panel.inset_axes([0.16, 0.05, 0.57, 0.71])
+    heatmap_axis = expression_panel.inset_axes([0.16, 0.15, 0.57, 0.71])
     draw_expression_heatmap(heatmap_axis, values)
     draw_composition(axes[0], values, show_title=False)
     draw_covariance(axes[1], values["covariance"], figure)
@@ -669,33 +670,42 @@ def render_figure() -> None:
     draw_fourier(axes[3], values["display_order"])
     draw_projection(axes[4], values["display_order"], values["projected"])
 
-    # Align the number 1 with the number 5 on the centered first title line.
+    # The expression subfigure spans the heatmap and composition graphics.
     figure.canvas.draw()
-    projection_title = axes[4].texts[0]
-    renderer = figure.canvas.get_renderer()
-    first_line = projection_title.get_text().split("\n")[0]
-    first_line_width, _, _ = renderer.get_text_width_height_descent(
-        first_line, projection_title.get_fontproperties(), ismath=False
+    expression_bounds = expression_panel.get_position()
+    composition_bounds = axes[0].get_position()
+    title_x = (expression_bounds.x0 + composition_bounds.x1) / 2
+    expression_title = figure.text(
+        title_x, 0.885, "1. Gene expression in CLR space",
+        ha="center", va="bottom", fontsize=24, fontweight="bold",
     )
-    title_center_x = projection_title.get_transform().transform(
-        projection_title.get_position()
-    )[0]
-    title_x = figure.transFigure.inverted().transform(
-        (title_center_x - first_line_width / 2, 0)
-    )[0]
-    figure.text(title_x, 0.885, "1. Gene expression in CLR space",
-                ha="left", va="bottom", fontsize=24, fontweight="bold")
+
+    # Keep each row's first title line at the same height, including multiline titles.
+    figure.canvas.draw()
+    renderer = figure.canvas.get_renderer()
+    for titles in (
+        (expression_title, axes[1].texts[0]),
+        tuple(axis.texts[0] for axis in axes[2:5]),
+    ):
+        title_top = max(title.get_window_extent(renderer).y1 for title in titles)
+        for title in titles:
+            center_x = title.get_transform().transform(title.get_position())[0]
+            position = figure.transFigure.inverted().transform((center_x, title_top))
+            title.set_transform(figure.transFigure)
+            title.set_position(position)
+            title.set_horizontalalignment("center")
+            title.set_verticalalignment("top")
+            title.set_multialignment("center")
 
     block_arrow(figure, axes[0], axes[1], horizontal_offset=-0.030)
     block_arrow(figure, axes[1], axes[2], downward=True)
     block_arrow(figure, axes[2], axes[3], horizontal_offset=0.018)
     block_arrow(figure, axes[3], axes[4])
 
-    figure.suptitle("clrcycle architecture", fontsize=30, fontweight="bold", y=0.97)
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-    figure.savefig(FIGURE_DIR / "Figure1.pdf")
-    figure.savefig(FIGURE_DIR / "Figure1.svg")
-    figure.savefig(FIGURE_DIR / "Figure1.png", dpi=300)
+    figure.savefig(FIGURE_DIR / "Figure1.pdf", bbox_inches="tight")
+    figure.savefig(FIGURE_DIR / "Figure1.svg", bbox_inches="tight")
+    figure.savefig(FIGURE_DIR / "Figure1.png", dpi=300, bbox_inches="tight")
     plt.close(figure)
     render_individual_panels(values)
 

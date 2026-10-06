@@ -257,16 +257,6 @@ def render_figure2(expression):
         top=0.855,
         bottom=0.065,
     )
-    fig.suptitle(
-        "Liver circadian projection and learnt feature geometry,\n"
-        "and analysis of the complete Hogenesch circadian atlas (GSE54650)",
-        fontsize=25,
-        fontweight="bold",
-        x=0.5,
-        ha="center",
-        y=0.985,
-        linespacing=1.08,
-    )
     top = outer[0].subgridspec(1, 3, width_ratios=(1.18, 1.02, 0.78), wspace=0.20)
     ax = fig.add_subplot(top[0, 0])
     sc = sample_projection(ax, samples, cmap, True, metrics)
@@ -275,7 +265,7 @@ def render_figure2(expression):
         xlabel="First Fourier cosine coordinate ($u$)",
         ylabel="First Fourier sine coordinate ($v$)",
     )
-    ax.text(
+    label_a = ax.text(
         -0.10,
         1.10,
         "A",
@@ -299,7 +289,7 @@ def render_figure2(expression):
         fontsize=TITLE_SIZE,
         y=1.04,
     )
-    ax2.text(
+    label_b = ax2.text(
         -0.06,
         1.10,
         "B",
@@ -317,6 +307,7 @@ def render_figure2(expression):
     liver_expr = expression[liver_cols].T
     middle = top[0, 2].subgridspec(3, 1, hspace=0.34)
     cde_axes = []
+    cde_labels = []
     for index, (gene, probe) in enumerate(
         [("DBP", "10553092"), ("RORC", "10494023"), ("CLOCK", "10530733")]
     ):
@@ -332,7 +323,7 @@ def render_figure2(expression):
             cmap,
             compact=True,
         )
-        axis.text(
+        cde_labels.append(axis.text(
             -0.13,
             1.02,
             chr(ord("C") + index),
@@ -340,7 +331,7 @@ def render_figure2(expression):
             fontsize=PANEL_SIZE,
             fontweight="bold",
             va="bottom",
-        )
+        ))
         if index == 0:
             axis.set_ylabel("ln expression")
         if index < 2:
@@ -376,6 +367,25 @@ def render_figure2(expression):
     cb = fig.colorbar(sc2, cax=cax_bottom, orientation="horizontal")
     cb.set_label("Circadian time modulo 24 h", labelpad=4)
     cb.set_ticks([0, 6, 12, 18, 24])
+
+    # Align A/B headings and the A/B/C letters independently of axes aspect ratios.
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    heading_top = max(axis.title.get_window_extent(renderer).y1 for axis in (ax, ax2))
+    for axis in (ax, ax2):
+        center_x = axis.title.get_transform().transform(axis.title.get_position())[0]
+        axis.set_title(axis.title.get_text(), y=1.0)
+        axis.title.set_transform(fig.transFigure)
+        axis.title.set_position(fig.transFigure.inverted().transform((center_x, heading_top)))
+        axis.title.set_verticalalignment("top")
+    labels = (label_a, label_b, cde_labels[0])
+    # Retain C's original spacing above its plot, matching D and E.
+    label_top = cde_labels[0].get_window_extent(renderer).y1
+    for label in labels:
+        left_x = label.get_transform().transform(label.get_position())[0]
+        label.set_transform(fig.transFigure)
+        label.set_position(fig.transFigure.inverted().transform((left_x, label_top)))
+        label.set_verticalalignment("top")
 
     FIG = ROOT / "figures"
     FIG.mkdir(exist_ok=True)

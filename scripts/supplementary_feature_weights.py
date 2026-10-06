@@ -215,9 +215,7 @@ def liver_figure():
     ax.set(
         xlabel="CT10 biological replicate",
         ylabel="Selected probe in clrcycle order",
-        title="Liver CT10 sample feature weights",
     )
-    ax.title.set_fontweight("bold")
     colorbar = fig.colorbar(image, ax=ax, pad=0.025, shrink=0.35)
     colorbar.set_label("Signed feature weight")
     colorbar.set_ticks(np.linspace(-0.2, 0.2, 5))
